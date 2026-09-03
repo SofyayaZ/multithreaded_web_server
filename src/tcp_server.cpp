@@ -8,10 +8,7 @@
 #include <optional>
 #include <functional>
 
-#include <http_request.hpp>
-#include <http_response.hpp>
 #include <router.hpp>
-#include <route.hpp>
 
 
 std::optional<HttpRequest> parseRequest(std::string request) {
@@ -38,6 +35,10 @@ std::optional<HttpRequest> parseRequest(std::string request) {
 };
 
 HttpResponse homeHandler(const HttpRequest& request) {
+    return {200, "This is a home page"};
+}
+
+HttpResponse helloHandler(const HttpRequest& request) {
     return {200, "Hello"};
 }
 
@@ -95,33 +96,23 @@ int main() {
     // Request parsing for bytes from buffer
     auto httpRequest = parseRequest(buffer);
     if (!httpRequest) {
-        std::cerr << "Bad http request structure";
+        std::cerr << "Bad http request structure\n";
         return 1;
     }
 
-    // Request validation
-    if (!(httpRequest->httpMethod == "GET") ||
-        !(httpRequest->httpVersion == "HTTP/1.1")) {
-        return 1;
-    }
+    Router router = Router();
+    router.addRoute("GET", "/", homeHandler);
+    router.addRoute("GET", "/hello", helloHandler);
+    HttpResponse response = router.route(*httpRequest);
 
-    std::cout << "\nMessage from client\n" << buffer << "\n";
+    // need to make serializer that will make from handlers' returns 
+    // classic HTTP-response structured string
 
-    // Forming response
-    std::string response =  "HTTP/1.1 200 OK\r\n"
-                            "Content-Length: 5\r\n"
-                            "Content-type: text/plain\r\n"
-                            "Connection: close\r\n"
-                            "\r\n"
-                            "Hello";
-
-    // Sending response to client
-    ssize_t messageLength = 0;
-    if ( (messageLength = send(clientSocket, response.data(), response.length(), 0)) < 0 ) {
-        perror("Failed to send response");
-        return 1;
-    };
-    std::cout << "Response sent\n";
+    // if ( (send(clientSocket, response, sizeof(response), 0)) < 0 ) {
+    //     std::cerr << "Response sending failed\n";
+    //     return 1;
+    // }
+    // std::cout << "Message succesfully sent to client " << clientSocket << "\n";
 
     // Closing sockets
     close(clientSocket);

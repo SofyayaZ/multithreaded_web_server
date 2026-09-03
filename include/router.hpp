@@ -1,10 +1,12 @@
+#pragma once
 #include <vector>
+#include <string>
 #include <http_request.hpp>
 #include <http_response.hpp>
 #include <route.hpp>
+#include <functional>
 
 
-#pragma once
 class Router {
     std::vector<Route> routes;
 public:

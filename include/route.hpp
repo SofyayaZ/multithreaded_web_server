@@ -1,4 +1,10 @@
 #pragma once
+#include <string>
+#include <functional>
+#include <http_response.hpp>
+#include <http_request.hpp>
+
+
 struct Route {
     std::string method;
     std::string endpoint;
