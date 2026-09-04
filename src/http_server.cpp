@@ -1,46 +1,21 @@
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <cstdio>
-#include <iostream>
-#include <unistd.h>
-#include <vector>
-#include <sstream>
-#include <optional>
-#include <functional>
-
-#include <router.hpp>
+#include <http_server.hpp>
 
 
-std::optional<HttpRequest> parseRequest(std::string request) {
-    size_t pos = request.find("\r\n");
-    if (pos != std::string::npos) {
-        request = request.substr(0, pos);
-    }
-    std::istringstream stream(request);
-    HttpRequest httpRequest;
-    if (!(stream >> httpRequest.httpMethod
-                 >> httpRequest.endpoint
-                 >> httpRequest.httpVersion)) {
-        std::cerr << "Parsing error";
-        return std::nullopt;
+bool sendAll(int clientSocket, const std::string& response) {
+    ssize_t sentData = 0;
+    size_t totalSent = 0;
+    while (totalSent < response.size()) {
+        if ( (sentData = send(clientSocket,
+                         response.data() + totalSent,
+                         response.size() - totalSent,
+                         0)) <= 0) {
+            return false;
+        }
+        totalSent += sentData; 
     }
 
-    std::string extra;
-    if (stream >> extra) {
-        std::cerr << "Extra words in request\n";
-        return std::nullopt;
-    }
-
-    return httpRequest;
+    return true;
 };
-
-HttpResponse homeHandler(const HttpRequest& request) {
-    return {200, "This is a home page"};
-}
-
-HttpResponse helloHandler(const HttpRequest& request) {
-    return {200, "Hello"};
-}
 
 int main() {
     // Creating server socket
@@ -50,6 +25,14 @@ int main() {
         return 1;
     };
     std::cout << "Socket has been created succesfully " << serverSocket << "\n"; 
+
+    // Reuse address in OS
+    int opt = 1;
+    if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        perror("Setsocket failed");
+        close(serverSocket);
+        return 1;
+    }
 
     // Creating sockaddr and binding it to server socket
     struct sockaddr_in serverAddress = {0};
@@ -68,6 +51,7 @@ int main() {
     // Set server socket listening
     if ( listen(serverSocket, 10) < 0) {
         perror("Listening failed");
+        close(serverSocket);
         return 1;
     };
 
@@ -79,6 +63,7 @@ int main() {
     int clientSocket = 0;
     if ( (clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddress, &len)) < 0) {
         perror("Client connection failed");
+        close(serverSocket);
         return 1;
     };
 
@@ -89,6 +74,8 @@ int main() {
     ssize_t receivedBytes = 0;
     if ( (receivedBytes = recv(clientSocket, buffer, sizeof(buffer) - 1, 0)) < 0 ) {
         perror("Failed receiving data from client");
+        close(serverSocket);
+        close(clientSocket);
         return 1;
     };
     buffer[receivedBytes] = '\0';
@@ -97,22 +84,29 @@ int main() {
     auto httpRequest = parseRequest(buffer);
     if (!httpRequest) {
         std::cerr << "Bad http request structure\n";
+        close(serverSocket);
+        close(clientSocket);
         return 1;
     }
 
+    // Adding routes and routing request from client
     Router router = Router();
     router.addRoute("GET", "/", homeHandler);
     router.addRoute("GET", "/hello", helloHandler);
     HttpResponse response = router.route(*httpRequest);
 
-    // need to make serializer that will make from handlers' returns 
-    // classic HTTP-response structured string
+    // Serializing response to string for sending data to client
+    ResponseSerializer serializer = ResponseSerializer();
+    std::string serializedResponse = serializer.serializeResponse(response);
 
-    // if ( (send(clientSocket, response, sizeof(response), 0)) < 0 ) {
-    //     std::cerr << "Response sending failed\n";
-    //     return 1;
-    // }
-    // std::cout << "Message succesfully sent to client " << clientSocket << "\n";
+    // Sending response to client
+    if (!sendAll(clientSocket, serializedResponse)) {
+        std::cerr << "Response sending failed\n";
+        close(serverSocket);
+        close(clientSocket);
+        return 1;
+    }
+    std::cout << "Message succesfully sent to client " << clientSocket << "\n";
 
     // Closing sockets
     close(clientSocket);
