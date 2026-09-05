@@ -11,5 +11,5 @@ struct HttpRequest {
         this->httpMethod = httpMethod;
         this->endpoint = endpoint;
         this->httpVersion = httpVersion;
-    };
+    }
 };

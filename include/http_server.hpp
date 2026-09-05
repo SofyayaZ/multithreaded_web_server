@@ -12,9 +12,11 @@
 #include <http_request.hpp>
 #include <http_response.hpp>
 #include <router.hpp>
-#include <handlers.hpp>
+#include <response_handlers.hpp>
 #include <request_parser.hpp>
 #include <response_serializer.hpp>
+#include <client_handler.hpp>
+
 
 HttpResponse homeHandler(const HttpRequest& request);
 HttpResponse helloHandler(const HttpRequest& request);
