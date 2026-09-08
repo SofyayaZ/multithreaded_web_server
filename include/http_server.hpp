@@ -8,6 +8,7 @@
 #include <sstream>
 #include <optional>
 #include <functional>
+#include <thread>
 
 #include <http_request.hpp>
 #include <http_response.hpp>
@@ -16,6 +17,7 @@
 #include <request_parser.hpp>
 #include <response_serializer.hpp>
 #include <client_handler.hpp>
+#include <thread_pool.hpp>
 
 
 HttpResponse homeHandler(const HttpRequest& request);

@@ -12,6 +12,7 @@ bool handleClient(int clientSocket, Router& router, ResponseSerializer& serializ
         } else {
             std::cerr << "Client has closed the connection\n";
         }
+        close(clientSocket);
         return false;
     }
     buffer[receivedBytes] = '\0';
@@ -20,6 +21,7 @@ bool handleClient(int clientSocket, Router& router, ResponseSerializer& serializ
     auto httpRequest = parseRequest(buffer);
     if (!httpRequest) {
         std::cerr << "Bad http request structure\n";
+        close(clientSocket);
         return false;
     }
 
@@ -32,9 +34,11 @@ bool handleClient(int clientSocket, Router& router, ResponseSerializer& serializ
     // Sending response to client
     if (!sendAll(clientSocket, serializedResponse)) {
         std::cerr << "Response sending failed\n";
+        close(clientSocket);
         return false;
     }
 
     std::cout << "Message succesfully sent to client " << clientSocket << "\n";
+    close(clientSocket);
     return true;
 }

@@ -50,6 +50,9 @@ int main() {
     //Creating serializer (HttpResponse -> std::string)
     ResponseSerializer serializer = ResponseSerializer();
 
+    // ThreadPool for accepting clients' connections
+    ThreadPool threadPool = ThreadPool(4, router, serializer);
+
     // Handling client's requests
     while(true) {
         // Creating address for client and accepting client connection request
@@ -57,26 +60,13 @@ int main() {
         socklen_t len = sizeof(clientAddress);
         int clientSocket = 0;
 
-        //////////////////////////////////////
-        //Здесь в дальнейшем будут потоки...//
-        //////////////////////////////////////
-        if ( (clientSocket = accept(serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &len)) < 0) {
-            std::cerr << "Client connection failed\n";
-            close(clientSocket);
+        if ( (clientSocket = accept(serverSocket, &clientAddress, &len)) < 0) {
+            std::cerr << "Failed to accept client connection\n";
             continue;
         }
-        std::cout << "Client socket " << clientSocket << " has been created succesfully\n";
+        std::cout << "Client socket has been created successfully\n";
         
-        // Handling client (recv, send bytes)
-        if (!handleClient(clientSocket, router, serializer)) {
-            std::cerr << "Client handling failed\n";
-            close(clientSocket);
-            continue;
-        }
-
-        // Closing client socket
-        close(clientSocket);
-        std::cout << "Client socket " << clientSocket << " has been closed\n";
+        threadPool.enqueue(clientSocket);
     }
 
     // Closing server socket

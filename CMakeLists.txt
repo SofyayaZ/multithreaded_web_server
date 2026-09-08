@@ -7,6 +7,7 @@ add_library(request_parser)
 add_library(response_serializer)
 add_library(send_all)
 add_library(client_handler)
+add_library(thread_pool)
 add_library(project_headers INTERFACE)
 
 target_sources(http_server
@@ -39,6 +40,10 @@ target_sources(client_handler
                src/client_handler.cpp
 )
 
+target_sources(thread_pool
+               PRIVATE
+               src/thread_pool.cpp)
+
 target_include_directories(project_headers
                            INTERFACE
                            ${CMAKE_SOURCE_DIR}/include
@@ -64,6 +69,10 @@ target_link_libraries(send_all
                       project_headers
 )
 
+target_link_libraries(thread_pool
+                      PUBLIC
+                      project_headers)
+
 target_link_libraries(client_handler
                       PUBLIC
                       router
@@ -72,7 +81,12 @@ target_link_libraries(client_handler
                       send_all
 )
 
+target_link_libraries(thread_pool
+                      PUBLIC
+                      client_handler
+)
+
 target_link_libraries(http_server
                       PRIVATE
-                      client_handler
+                      thread_pool
 )
