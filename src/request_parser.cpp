@@ -12,7 +12,7 @@ std::optional<HttpRequest> parseRequest(const std::string& request) {
     if (!(stream >> httpRequest.httpMethod
                  >> httpRequest.endpoint
                  >> httpRequest.httpVersion)) {
-        std::cerr << "Parsing error";
+        std::cerr << "Parsing error\n";
         return std::nullopt;
     }
 

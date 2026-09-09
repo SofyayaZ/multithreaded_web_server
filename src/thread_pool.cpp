@@ -12,6 +12,7 @@ ThreadPool::ThreadPool(size_t countWorkers,
 }
 
 ThreadPool::~ThreadPool() {
+    std::cout << "ThreadPool destructor is called\n";
     {
         std::lock_guard<std::mutex> lock(mutex);
         stop = true;
@@ -21,6 +22,7 @@ ThreadPool::~ThreadPool() {
     for(auto& worker : workers) {
         worker.join();
     }
+    std::cout << "All workers has been joined\n";
 }
 
 void ThreadPool::enqueue(int clientSocket) {

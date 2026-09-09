@@ -8,13 +8,14 @@ void handleSignal(int signal) {
 }
 
 int main() {
+    // For handling signals
     struct sigaction sa{};
     sa.sa_handler = &handleSignal;
-    sigemptyset(&sa.sa_mask);     // do not block extra sygnals
+    sigemptyset(&sa.sa_mask);     // do not block extra signals
     sa.sa_flags = 0;
 
     if (sigaction(SIGINT, &sa, NULL) == -1) {
-        perror("Ошибка вызова sigaction");
+        perror("Failed to call sigaction");
         return 1;
     }
 

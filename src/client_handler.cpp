@@ -1,21 +1,48 @@
 #include <client_handler.hpp>
 
 
-// -1 -> error
-//  1 -> success
 bool handleClient(int clientSocket, Router& router, ResponseSerializer& serializer) {
-    char buffer [4096];
-    ssize_t receivedBytes = 0;
-    if ( (receivedBytes = recv(clientSocket, buffer, sizeof(buffer) - 1, 0)) <= 0 ) {
-        if (receivedBytes < 0) {
-            perror("Failed receiving data from client\n");
-        } else {
-            std::cerr << "Client has closed the connection\n";
-        }
+    // For timeout handling
+    struct timeval timeout{};
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+
+    if (setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        std::cerr << "Socket options set failed\n";
         close(clientSocket);
         return false;
     }
-    buffer[receivedBytes] = '\0';
+
+    // For receiving data in buffers and putting them in request
+    char buffer [4096];
+    ssize_t receivedBytes = 0;
+    std::string request;
+    constexpr size_t MAX_REQUEST_SIZE = 8192;
+
+    while(request.find("\r\n\r\n") == std::string::npos) {
+        if ( (receivedBytes = recv(clientSocket,
+                                   buffer,
+                                   sizeof(buffer) - 1,
+                                   0)) <= 0 ) {
+            if (receivedBytes < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    std::cout << "ClientSocket " << clientSocket << " stopped receiving after timeout\n";
+                } else {
+                    perror("Failed receiving data from client\n");
+                }
+            } else {
+                std::cerr << "Client has closed the connection\n";
+            }
+            close(clientSocket);
+            return false;
+        }
+        request.append(buffer, receivedBytes);
+        if (request.size() > MAX_REQUEST_SIZE) {
+            std::cerr << "Too long request from client " << clientSocket << "\n";
+            close(clientSocket);
+            return false;
+        }
+    }
 
     // Request parsing for bytes from buffer
     auto httpRequest = parseRequest(buffer);
