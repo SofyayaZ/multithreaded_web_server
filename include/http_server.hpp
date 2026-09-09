@@ -9,6 +9,7 @@
 #include <optional>
 #include <functional>
 #include <thread>
+#include <csignal>
 
 #include <http_request.hpp>
 #include <http_response.hpp>
@@ -20,6 +21,6 @@
 #include <thread_pool.hpp>
 
 
-HttpResponse homeHandler(const HttpRequest& request);
-HttpResponse helloHandler(const HttpRequest& request);
-int main();
+volatile sig_atomic_t stop = 0;
+void handleSignal(int signal);
+int main(); 

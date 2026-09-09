@@ -1,7 +1,23 @@
 #include <http_server.hpp>
 
 
+void handleSignal(int signal) {
+    if (signal == SIGINT) {
+        stop = 1;
+    }
+}
+
 int main() {
+    struct sigaction sa{};
+    sa.sa_handler = &handleSignal;
+    sigemptyset(&sa.sa_mask);     // do not block extra sygnals
+    sa.sa_flags = 0;
+
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
+        perror("Ошибка вызова sigaction");
+        return 1;
+    }
+
     // Creating server socket
     int serverSocket = 0;
     if ( (serverSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
@@ -54,13 +70,16 @@ int main() {
     ThreadPool threadPool = ThreadPool(4, router, serializer);
 
     // Handling client's requests
-    while(true) {
+    while(!stop) {
         // Creating address for client and accepting client connection request
         sockaddr clientAddress{};
         socklen_t len = sizeof(clientAddress);
         int clientSocket = 0;
 
         if ( (clientSocket = accept(serverSocket, &clientAddress, &len)) < 0) {
+            if (errno == EINTR && stop) {
+                break;
+            }
             std::cerr << "Failed to accept client connection\n";
             continue;
         }
