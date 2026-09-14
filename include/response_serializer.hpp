@@ -5,8 +5,9 @@
 
 
 class ResponseSerializer {
-    std::unordered_map<unsigned int, std::string> reasoningText = {
+    const std::unordered_map<unsigned int, std::string> reasoningText = {
         {200, "OK"},
+        {400, "Bad request"},
         {404, "Not Found"},
         {405, "Method Not Allowed"}
     };

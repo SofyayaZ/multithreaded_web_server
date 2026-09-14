@@ -11,4 +11,4 @@
 #include <send_all.hpp>
 
 
-bool handleClient(int clientSocket, Router& router, ResponseSerializer& serializer);
+void handleClient(int clientSocket, Router& router, ResponseSerializer& serializer);
