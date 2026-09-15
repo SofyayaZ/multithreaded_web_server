@@ -1,7 +1,24 @@
 cmake_minimum_required(VERSION 3.25)
 project ("my super server" LANGUAGES CXX)
-add_executable(http_server)
+enable_testing()
 
+# GoogleTest external library
+include(FetchContent)
+
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG v1.17.0
+)
+
+FetchContent_MakeAvailable(googletest)
+include(GoogleTest)
+
+# Executable + test
+add_executable(http_server)
+add_executable(router_unit_tests)
+
+# Internal libraries
 add_library(router)
 add_library(request_parser)
 add_library(response_serializer)
@@ -10,11 +27,18 @@ add_library(client_handler)
 add_library(thread_pool)
 add_library(project_headers INTERFACE)
 
+# Target executable
 target_sources(http_server
                PRIVATE
                src/http_server.cpp
 )
 
+target_sources(router_unit_tests
+               PRIVATE
+               tests/test_router.cpp
+)
+
+# Target libraries
 target_sources(router
                PRIVATE
                src/router.cpp
@@ -42,11 +66,20 @@ target_sources(client_handler
 
 target_sources(thread_pool
                PRIVATE
-               src/thread_pool.cpp)
+               src/thread_pool.cpp
+)
 
+# Include directory
 target_include_directories(project_headers
                            INTERFACE
                            ${CMAKE_SOURCE_DIR}/include
+)
+
+# Link libraries
+target_link_libraries(router_unit_tests
+                      PRIVATE
+                      router
+                      GTest::gtest_main
 )
 
 target_link_libraries(router
@@ -71,7 +104,9 @@ target_link_libraries(send_all
 
 target_link_libraries(thread_pool
                       PUBLIC
-                      project_headers)
+                      project_headers
+                      client_handler
+)
 
 target_link_libraries(client_handler
                       PUBLIC
@@ -81,12 +116,9 @@ target_link_libraries(client_handler
                       send_all
 )
 
-target_link_libraries(thread_pool
-                      PUBLIC
-                      client_handler
-)
-
 target_link_libraries(http_server
                       PRIVATE
                       thread_pool
 )
+
+gtest_discover_tests(router_unit_tests)

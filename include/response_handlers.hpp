@@ -12,5 +12,5 @@ HttpResponse helloHandler(const HttpRequest& request) {
 }
 
 HttpResponse postHelloHandler(const HttpRequest& request) {
-    return {200, request.body, {}};
+    return {200, "Hello from POST", {}};
 }

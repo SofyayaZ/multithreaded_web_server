@@ -1,4 +1,5 @@
 #include <router.hpp>
+#include <iostream>
 
 
 void Router::addRoute(std::string method, std::string endpoint, std::function<HttpResponse(const HttpRequest&)> handler) {
