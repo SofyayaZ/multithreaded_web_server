@@ -64,6 +64,7 @@ int main() {
     Router router = Router();
     router.addRoute("GET", "/", homeHandler);
     router.addRoute("GET", "/hello", helloHandler);
+    router.addRoute("POST", "/hello", postHelloHandler);
     //Creating serializer (HttpResponse -> std::string)
     ResponseSerializer serializer = ResponseSerializer();
 

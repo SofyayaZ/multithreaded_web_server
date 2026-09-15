@@ -4,9 +4,13 @@
 
 
 HttpResponse homeHandler(const HttpRequest& request) {
-    return {200, "This is a home page"};
+    return {200, "This is a home page", {}};
 }
 
 HttpResponse helloHandler(const HttpRequest& request) {
-    return {200, "Hello"};
+    return {200, "Hello", {}};
+}
+
+HttpResponse postHelloHandler(const HttpRequest& request) {
+    return {200, request.body, {}};
 }
