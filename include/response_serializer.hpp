@@ -13,5 +13,5 @@ class ResponseSerializer {
     };
 
 public:
-    std::string serializeResponse(const HttpResponse& response);
+    std::string serializeResponse(const HttpResponse& response) const;
 };

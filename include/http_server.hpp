@@ -19,6 +19,7 @@
 #include <response_serializer.hpp>
 #include <client_handler.hpp>
 #include <thread_pool.hpp>
+#include <socket.hpp>
 
 
 volatile sig_atomic_t stop = 0;

@@ -6,7 +6,7 @@ void Router::addRoute(std::string method, std::string endpoint, std::function<Ht
     routes.emplace_back(method, endpoint, handler);
 };
 
-HttpResponse Router::route(const HttpRequest& request) {
+HttpResponse Router::route(const HttpRequest& request) const {
     HttpResponse response;
     std::string allowedMethods{};
     bool validEndpoint = false;

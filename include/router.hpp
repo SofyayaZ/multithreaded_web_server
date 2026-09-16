@@ -11,5 +11,5 @@ class Router {
     std::vector<Route> routes;
 public:
     void addRoute(std::string method, std::string endpoint, std::function<HttpResponse(const HttpRequest&)> handler);
-    HttpResponse route(const HttpRequest& request);
+    HttpResponse route(const HttpRequest& request) const;
 };

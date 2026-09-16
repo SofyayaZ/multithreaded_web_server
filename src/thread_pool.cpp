@@ -25,13 +25,13 @@ ThreadPool::~ThreadPool() {
     std::cout << "All workers has been joined\n";
 }
 
-void ThreadPool::enqueue(int clientSocket) {
+void ThreadPool::enqueue(Socket clientSocket) {
     {
         std::lock_guard<std::mutex> lock(mutex);
         if (stop) {
             return;
         }
-        clients.push(clientSocket);
+        clients.push(std::move(clientSocket));
     }
     condition.notify_one();
 }
@@ -49,7 +49,7 @@ void ThreadPool::worker() {
             return;
         }
 
-        int clientSocket = clients.front();
+        Socket clientSocket = std::move(clients.front());
         clients.pop();
         lock.unlock();
 

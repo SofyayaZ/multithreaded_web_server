@@ -1,7 +1,7 @@
 #include <response_serializer.hpp>
 
 
-std::string ResponseSerializer::serializeResponse(const HttpResponse& response) {
+std::string ResponseSerializer::serializeResponse(const HttpResponse& response) const {
     std::string serializedReponse = "";
     serializedReponse += "HTTP/1.1 ";
     serializedReponse += std::to_string(response.statusCode);

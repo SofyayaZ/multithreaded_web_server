@@ -1,15 +1,16 @@
 #include <client_handler.hpp>
 
 
-void handleClient(int clientSocket, Router& router, ResponseSerializer& serializer) {
+void handleClient(const Socket& clientSocket,
+                  const Router& router, 
+                  const ResponseSerializer& serializer) {
     // For timeout handling
     struct timeval timeout{};
     timeout.tv_sec = 5;
     timeout.tv_usec = 0;
 
-    if (setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+    if (setsockopt(clientSocket.get(), SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
         std::cerr << "Socket options set failed\n";
-        close(clientSocket);
         return;
     }
 
@@ -20,26 +21,25 @@ void handleClient(int clientSocket, Router& router, ResponseSerializer& serializ
     constexpr size_t MAX_REQUEST_SIZE = 8192;
     // Getting request part by part
     while(request.find("\r\n\r\n") == std::string::npos) {
-        if ( (receivedBytes = recv(clientSocket,
+        if ( (receivedBytes = recv(clientSocket.get(),
                                    buffer,
                                    sizeof(buffer),
                                    0)) <= 0 ) {
             if (receivedBytes < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    std::cout << "ClientSocket " << clientSocket << " stopped receiving after timeout\n";
+                    std::cout << "ClientSocket " << clientSocket.get() << " stopped receiving after timeout\n";
                 } else {
                     perror("Failed receiving data from client\n");
                 }
             } else {
                 std::cerr << "Client has closed the connection\n";
             }
-            close(clientSocket);
+            
             return;
         }
         request.append(buffer, receivedBytes);
         if (request.size() > MAX_REQUEST_SIZE) {
-            std::cerr << "Too long request from client " << clientSocket << "\n";
-            close(clientSocket);
+            std::cerr << "Too long request from client " << clientSocket.get() << "\n";
             return;
         }
     }
@@ -60,17 +60,17 @@ void handleClient(int clientSocket, Router& router, ResponseSerializer& serializ
         }
         else {
             while (httpRequest->body.size() < httpRequest->contentLength) {
-                if ( (receivedBytes = recv(clientSocket, buffer, sizeof(buffer), 0)) <= 0 ) {
+                if ( (receivedBytes = recv(clientSocket.get(), buffer, sizeof(buffer), 0)) <= 0 ) {
                     if (receivedBytes < 0) {
                         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                            std::cout << "ClientSocket " << clientSocket << " stopped receiving after timeout\n";
+                            std::cout << "ClientSocket " << clientSocket.get() << " stopped receiving after timeout\n";
                         } else {
                             perror("Failed receiving request body from client\n");
                         }
                     } else {
                         std::cerr << "Client has closed the connection\n";
                     }
-                    close(clientSocket);
+                    
                     return;
                 }
                 httpRequest->body.append(buffer, receivedBytes);
@@ -93,13 +93,11 @@ void handleClient(int clientSocket, Router& router, ResponseSerializer& serializ
     std::string serializedResponse = serializer.serializeResponse(response);
 
     // Sending response to client
-    if (!sendAll(clientSocket, serializedResponse)) {
+    if (!sendAll(clientSocket.get(), serializedResponse)) {
         std::cerr << "Response sending failed\n";
-        close(clientSocket);
         return;
     }
 
-    std::cout << "Message succesfully sent to client " << clientSocket << "\n";
-    close(clientSocket);
+    std::cout << "Message succesfully sent to client " << clientSocket.get() << "\n";
     return;
 }

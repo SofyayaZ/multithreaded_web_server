@@ -9,6 +9,9 @@
 #include <router.hpp>
 #include <response_serializer.hpp>
 #include <send_all.hpp>
+#include <socket.hpp>
 
 
-void handleClient(int clientSocket, Router& router, ResponseSerializer& serializer);
+void handleClient(const Socket& clientSocket,
+                  const Router& router, 
+                  const ResponseSerializer& serializer);
