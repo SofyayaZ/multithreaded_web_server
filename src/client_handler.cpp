@@ -1,5 +1,39 @@
 #include <client_handler.hpp>
 
+#include <iostream>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <request_parser.hpp>
+#include <http_response.hpp>
+#include <send_all.hpp>
+
+
+constexpr size_t MAX_REQUEST_SIZE = 8192;
+constexpr size_t MAX_BODY_SIZE = 8192;
+
+enum class RecvStatus {
+    SUCCESS,
+    CLOSED,
+    ERROR
+};
+
+RecvStatus recvData(const Socket& clientSocket,
+                    char* buffer,
+                    size_t bufferSize,
+                    ssize_t& receivedBytes) {
+    receivedBytes = recv(clientSocket.get(),
+                               buffer,
+                               bufferSize,
+                               0);
+    if (receivedBytes < 0) {
+        return RecvStatus::ERROR;
+    }
+    if (receivedBytes == 0) {
+        return RecvStatus::CLOSED;
+    }
+    return RecvStatus::SUCCESS;
+}
 
 void handleClient(const Socket& clientSocket,
                   const Router& router, 
@@ -18,30 +52,28 @@ void handleClient(const Socket& clientSocket,
     char buffer[4096];
     ssize_t receivedBytes = 0;
     std::string request;
-    constexpr size_t MAX_REQUEST_SIZE = 8192;
     // Getting request part by part
     while(request.find("\r\n\r\n") == std::string::npos) {
-        if ( (receivedBytes = recv(clientSocket.get(),
-                                   buffer,
-                                   sizeof(buffer),
-                                   0)) <= 0 ) {
-            if (receivedBytes < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    std::cout << "ClientSocket " << clientSocket.get() << " stopped receiving after timeout\n";
-                } else {
-                    perror("Failed receiving data from client\n");
-                }
-            } else {
-                std::cerr << "Client has closed the connection\n";
+        auto receivedData = recvData(clientSocket, buffer, sizeof(buffer), receivedBytes);
+        if (receivedData == RecvStatus::ERROR) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                std::cout << "The client " << clientSocket.get() << " stopped receiving after timeout\n";
             }
-            
+            else {
+                perror("Failed receiving data from client");
+            }
+
             return;
         }
-        request.append(buffer, receivedBytes);
-        if (request.size() > MAX_REQUEST_SIZE) {
+        if (receivedData == RecvStatus::CLOSED) {
+            std::cout << "The client " << clientSocket.get() << " has been closed\n";
+            return;
+        }
+        if (request.size() + receivedBytes > MAX_REQUEST_SIZE) {
             std::cerr << "Too long request from client " << clientSocket.get() << "\n";
             return;
         }
+        request.append(buffer, receivedBytes);
     }
 
     HttpResponse response{};
@@ -53,33 +85,35 @@ void handleClient(const Socket& clientSocket,
         response.statusCode = 400;
     }
     else {
-        constexpr size_t MAX_BODY_SIZE = 8192;
-        if (httpRequest->contentLength > MAX_BODY_SIZE) {
+        if (httpRequest->contentLength > MAX_BODY_SIZE ||
+            httpRequest->body.size() > httpRequest->contentLength) {
             std::cerr << "Bad http request structure\n";
             response.statusCode = 400;
         }
-        else {
+        else if (httpRequest->body.size() < httpRequest->contentLength) {
             while (httpRequest->body.size() < httpRequest->contentLength) {
-                if ( (receivedBytes = recv(clientSocket.get(), buffer, sizeof(buffer), 0)) <= 0 ) {
-                    if (receivedBytes < 0) {
-                        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                            std::cout << "ClientSocket " << clientSocket.get() << " stopped receiving after timeout\n";
-                        } else {
-                            perror("Failed receiving request body from client\n");
-                        }
-                    } else {
-                        std::cerr << "Client has closed the connection\n";
+                auto receivedData = recvData(clientSocket, buffer, sizeof(buffer), receivedBytes);
+                if (receivedData == RecvStatus::ERROR) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        std::cout << "The client " << clientSocket.get() << " stopped receiving after timeout\n";
                     }
-                    
+                    else {
+                        perror("Failed receiving data from client");
+                    }
+
                     return;
                 }
-                httpRequest->body.append(buffer, receivedBytes);
-                if (httpRequest->body.size() > httpRequest->contentLength ||
-                    httpRequest->body.size() > MAX_BODY_SIZE) {
+                if (receivedData == RecvStatus::CLOSED) {
+                    std::cout << "The client " << clientSocket.get() << " has been closed\n";
+                    return;
+                }
+                if (httpRequest->body.size() + receivedBytes > httpRequest->contentLength ||
+                    httpRequest->body.size() + receivedBytes > MAX_BODY_SIZE) {
                     std::cerr << "Bad http request structure\n";
                     response.statusCode = 400;
                     break;
                 }
+                httpRequest->body.append(buffer, receivedBytes);
             }
         }
     }
