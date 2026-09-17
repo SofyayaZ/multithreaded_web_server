@@ -1,5 +1,8 @@
 #include <request_parser.hpp>
 
+#include <sstream>
+#include <iostream>
+
 
 std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
     std::stringstream requestStream(stringRequest);

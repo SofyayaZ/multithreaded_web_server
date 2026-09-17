@@ -1,5 +1,8 @@
 #include <send_all.hpp>
 
+#include <iostream>
+#include <sys/socket.h>
+
 
 bool sendAll(int clientSocket, const std::string& response) {
     struct timeval timeout{};

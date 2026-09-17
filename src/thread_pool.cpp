@@ -1,5 +1,9 @@
 #include <thread_pool.hpp>
 
+#include <iostream>
+#include <cstddef>
+#include <client_handler.hpp>
+
 
 ThreadPool::ThreadPool(size_t countWorkers,
                        Router& router,

@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": false,
-      "cwd": "/home/soniazaitceva/Documents/vs_code_source/С++/serv/src",
-      "program": "/home/soniazaitceva/Documents/vs_code_source/С++/serv/src/build/Debug/outDebug",
+      "cwd": "/home/soniazaitceva/Documents/vs_code_source/С++/serv",
+      "program": "/home/soniazaitceva/Documents/vs_code_source/С++/serv/build/http_server",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
