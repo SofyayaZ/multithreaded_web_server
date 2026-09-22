@@ -37,8 +37,11 @@ void ThreadPool::enqueue(Socket clientSocket) {
         if (stop) {
             return;
         }
-        if (clients.size() <= MAX_PENDING_CLIENTS) {
+        if (clients.size() < MAX_PENDING_CLIENTS) {
             clients.push(std::move(clientSocket));
+        }
+        else {
+            return;
         }
     }
     condition.notify_one();
