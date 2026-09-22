@@ -29,7 +29,7 @@ void handleSignal(int signal) {
 }
 
 int main() {
-    // For handling signals
+    // For handling POSIX-signals
     struct sigaction sa{};
     sa.sa_handler = &handleSignal;
     sigemptyset(&sa.sa_mask);     // do not block extra signals

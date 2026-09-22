@@ -9,7 +9,7 @@
 #include <send_all.hpp>
 
 
-constexpr size_t MAX_REQUEST_SIZE = 8192;
+constexpr size_t MAX_HEADER_SIZE = 8192;
 constexpr size_t MAX_BODY_SIZE = 8192;
 
 enum class RecvStatus {
@@ -43,6 +43,8 @@ void handleClient(const Socket& clientSocket,
     timeout.tv_sec = 5;
     timeout.tv_usec = 0;
 
+    // ЗДЕСЬ надо сделать так, чтобы SO_RCVTIMEO действовал не для одного recv, а
+    // для всего процесса чтения сообщения от клиента в целом
     if (setsockopt(clientSocket.get(), SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
         std::cerr << "Socket options set failed\n";
         return;
@@ -69,7 +71,7 @@ void handleClient(const Socket& clientSocket,
             std::cout << "The client " << clientSocket.get() << " has been closed\n";
             return;
         }
-        if (request.size() + receivedBytes > MAX_REQUEST_SIZE) {
+        if (request.size() + receivedBytes > MAX_HEADER_SIZE) {
             std::cerr << "Too long request from client " << clientSocket.get() << "\n";
             return;
         }

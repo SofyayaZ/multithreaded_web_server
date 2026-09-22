@@ -5,6 +5,8 @@
 #include <client_handler.hpp>
 
 
+constexpr size_t MAX_PENDING_CLIENTS = 8;
+
 ThreadPool::ThreadPool(size_t countWorkers,
                        Router& router,
                        ResponseSerializer& serializer):
@@ -35,7 +37,9 @@ void ThreadPool::enqueue(Socket clientSocket) {
         if (stop) {
             return;
         }
-        clients.push(std::move(clientSocket));
+        if (clients.size() <= MAX_PENDING_CLIENTS) {
+            clients.push(std::move(clientSocket));
+        }
     }
     condition.notify_one();
 }
