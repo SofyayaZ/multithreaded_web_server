@@ -16,7 +16,7 @@ include(GoogleTest)
 
 # Executable + test
 add_executable(http_server)
-add_executable(router_unit_tests)
+add_executable(unit_tests)
 
 # Internal libraries
 add_library(router)
@@ -33,9 +33,10 @@ target_sources(http_server
                src/http_server.cpp
 )
 
-target_sources(router_unit_tests
+target_sources(unit_tests
                PRIVATE
                tests/test_router.cpp
+               tests/test_request_parser.cpp
 )
 
 # Target libraries
@@ -76,9 +77,10 @@ target_include_directories(project_headers
 )
 
 # Link libraries
-target_link_libraries(router_unit_tests
+target_link_libraries(unit_tests
                       PRIVATE
                       router
+                      request_parser
                       GTest::gtest_main
 )
 
@@ -121,4 +123,4 @@ target_link_libraries(http_server
                       thread_pool
 )
 
-gtest_discover_tests(router_unit_tests)
+gtest_discover_tests(unit_tests)

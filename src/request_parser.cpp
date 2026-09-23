@@ -29,7 +29,7 @@ bool isValidHeader(const std::string& header) {
 }
 
 std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
-    std::stringstream requestStream(stringRequest);
+    std::istringstream requestStream(stringRequest);
     std::string requestLine{};
 
     // Getting the first line of request
@@ -60,7 +60,7 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
     bool hasHost = false;
     bool hasUserAgent = false;
     bool endOfHeaders = false;
-    while (std::getline(requestStream, requestLine)) {
+    while (std::getline(requestStream, requestLine, '\n')) {
         // Check the string beetwen headers and body
         if (requestLine == "\r") {
             endOfHeaders = true;
@@ -82,10 +82,11 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
 
         // Check if header is empty
         if (header.empty()) {
-            std::cerr << "Header is empty\n";
+            std::cerr << "Empty header\n";
             return std::nullopt;
         }
 
+        // Check if header is valid
         if (!isValidHeader(header)) {
             std::cerr << "Invalid header format\n";
             return std::nullopt;
@@ -95,7 +96,7 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
         for (auto& c : header) {
             c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
         }
-        // Check dubling Content-Length header
+        // Check double Content-Length header
         if (header == "content-length") {
             if (hasContentLength) {
                 std::cerr << "Duplicated Content-Length header is invalid\n";
@@ -104,7 +105,7 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
             hasContentLength = true;
         }
 
-        // Check dubling Host header
+        // Check double Host header
         if (header == "host") {
             if (hasHost) {
                 std::cerr << "Duplicated Host header is invalid\n";
@@ -113,7 +114,7 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
             hasHost = true;
         }
 
-        // Check dubling User-Agent header
+        // Check double User-Agent header
         if (header == "user-agent") {
             if (hasUserAgent) {
                 std::cerr << "Duplicated User-Agent header is invalid\n";
@@ -126,14 +127,20 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
         headerContent = requestLine.substr(colon + 1);
 
         // Deleting '\r' from header content
-        if (!headerContent.empty() && headerContent.back() == '\r') {
+        if (headerContent.back() == '\r') {
             headerContent.pop_back();
         }
-        // Deleting ' ' from header content
+        // Deleting ' ' from header content, check if it's empty
         auto first = headerContent.find_first_not_of(' ');
-        if (first != std::string::npos) {
+        if (first == std::string::npos) {
+            std::cerr << "Empty header content\n";
+            return std::nullopt;
+        }
+
+        if (first != 0) {
             headerContent.erase(0, first);
         }
+
         httpRequest.headers[header] = headerContent;
     }
 
@@ -172,10 +179,7 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
     }
     
     const std::string& contentLengthValue = it->second;
-    if (contentLengthValue.empty()) {
-        std::cerr << "Empty Content-Length\n";
-        return std::nullopt;
-    }
+    
     for (unsigned char c : contentLengthValue) {
         if (!std::isdigit(c)) {
             std::cerr << "Invalid Content-Length value\n";

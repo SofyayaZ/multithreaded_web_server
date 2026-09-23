@@ -1,0 +1,314 @@
+#include <gtest/gtest.h>
+#include <request_parser.hpp>
+#include <http_request.hpp>
+#include <http_response.hpp>
+#include <iostream>
+
+
+TEST(RequestParser, ParseValidGet) {
+    std::string request{};
+    request += "GET / HTTP/1.1\r\n";
+    request += "HosT: :/example.com\r\n";
+    request += "User-Agent: Mozilla/5.0\r\n";
+    request += "Accept: text/html\r\n\r\n";
+    auto realParsedRequest = parseRequest(request);
+    HttpRequest expectedParsedRequest{"GET", "/", "HTTP/1.1"};
+    expectedParsedRequest.headers = {{"host", ":/example.com"}, 
+                                     {"user-agent", "Mozilla/5.0"},
+                                     {"accept", "text/html"}};
+    EXPECT_EQ(realParsedRequest->httpMethod, expectedParsedRequest.httpMethod);
+    EXPECT_EQ(realParsedRequest->endpoint, expectedParsedRequest.endpoint);
+    EXPECT_EQ(realParsedRequest->httpVersion, expectedParsedRequest.httpVersion);
+    EXPECT_EQ(realParsedRequest->contentLength, expectedParsedRequest.contentLength);
+    EXPECT_EQ(realParsedRequest->headers, expectedParsedRequest.headers);
+    EXPECT_EQ(realParsedRequest->body, expectedParsedRequest.body);
+}
+
+TEST(RequestParser, ParseValidPost) {
+    std::string request{};
+    request += "POST / HTTP/1.1\r\n";
+    request += "Host: localhost\r\n";
+    request += "User-Agent: Chrome/16.0\r\n";
+    request += "Accept: text/plain\r\n";
+    request += "Content-Length: 12\r\n";
+    request += "\r\n";
+    request += "Body to POST";
+    auto realParsedRequest = parseRequest(request);
+    HttpRequest expectedParsedRequest{"POST", "/", "HTTP/1.1"};
+    expectedParsedRequest.headers = {{"host", "localhost"}, 
+                                     {"user-agent", "Chrome/16.0"},
+                                     {"accept", "text/plain"},
+                                     {"content-length", "12"}};
+    expectedParsedRequest.contentLength = 12;
+    expectedParsedRequest.body = "Body to POST";
+    EXPECT_EQ(realParsedRequest->httpMethod, expectedParsedRequest.httpMethod);
+    EXPECT_EQ(realParsedRequest->endpoint, expectedParsedRequest.endpoint);
+    EXPECT_EQ(realParsedRequest->httpVersion, expectedParsedRequest.httpVersion);
+    EXPECT_EQ(realParsedRequest->contentLength, expectedParsedRequest.contentLength);
+    EXPECT_EQ(realParsedRequest->headers, expectedParsedRequest.headers);
+    EXPECT_EQ(realParsedRequest->body, expectedParsedRequest.body);
+}
+
+TEST(RequestParser, ParsePartialBody) {
+    std::string request{};
+    request += "POST / HTTP/1.1\r\n";
+    request += "Host: localhost\r\n";
+    request += "User-Agent: Chrome/16.0\r\n";
+    request += "Accept: text/plain\r\n";
+    request += "Content-Length: 12\r\n";
+    request += "\r\n";
+    request += "Body to";
+    auto realParsedRequest = parseRequest(request);
+    HttpRequest expectedParsedRequest{"POST", "/", "HTTP/1.1"};
+    expectedParsedRequest.headers = {{"host", "localhost"}, 
+                                     {"user-agent", "Chrome/16.0"},
+                                     {"accept", "text/plain"},
+                                     {"content-length", "12"}};
+    expectedParsedRequest.contentLength = 12;
+    expectedParsedRequest.body = "Body to";
+    EXPECT_EQ(realParsedRequest->httpMethod, expectedParsedRequest.httpMethod);
+    EXPECT_EQ(realParsedRequest->endpoint, expectedParsedRequest.endpoint);
+    EXPECT_EQ(realParsedRequest->httpVersion, expectedParsedRequest.httpVersion);
+    EXPECT_EQ(realParsedRequest->contentLength, expectedParsedRequest.contentLength);
+    EXPECT_EQ(realParsedRequest->headers, expectedParsedRequest.headers);
+    EXPECT_EQ(realParsedRequest->body, expectedParsedRequest.body);
+}
+
+TEST(RequestParser, ParseZeroContentLength) {
+    std::string request{};
+    request += "POST / HTTP/1.1\r\n";
+    request += "Host: localhost\r\n";
+    request += "User-Agent: Chrome/16.0\r\n";
+    request += "Accept: text/plain\r\n";
+    request += "Content-Length: 0\r\n";
+    request += "\r\n";
+    auto realParsedRequest = parseRequest(request);
+    HttpRequest expectedParsedRequest{"POST", "/", "HTTP/1.1"};
+    expectedParsedRequest.headers = {{"host", "localhost"}, 
+                                     {"user-agent", "Chrome/16.0"},
+                                     {"accept", "text/plain"},
+                                     {"content-length", "0"}};
+    EXPECT_EQ(realParsedRequest->httpMethod, expectedParsedRequest.httpMethod);
+    EXPECT_EQ(realParsedRequest->endpoint, expectedParsedRequest.endpoint);
+    EXPECT_EQ(realParsedRequest->httpVersion, expectedParsedRequest.httpVersion);
+    EXPECT_EQ(realParsedRequest->contentLength, expectedParsedRequest.contentLength);
+    EXPECT_EQ(realParsedRequest->headers, expectedParsedRequest.headers);
+    EXPECT_EQ(realParsedRequest->body, expectedParsedRequest.body);
+}
+
+TEST (RequestParser, ParseExtraWords) {
+    std::string request{};
+    request += "GET / HTTP/1.1 garbageeee\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Extra symbols in request: garbageeee\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST (RequestParser, ParseWrongHTTPVersion) {
+    std::string request{};
+    request += "GET / HTTP/0.1\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Invalid HTTP request version: HTTP/0.1\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST (RequestParser, ParseWrongLF) {
+    std::string request{};
+    request += "GET / HTTP/1.1\r\n";
+    request += "Host: :/example.com\r";
+    request += "User-Agent: Mozilla/5.0\r\n";
+    request += "Accept: text/html\r\n";
+    request += "\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST (RequestParser, ParseNoColonInHeader) {
+    std::string request{};
+    request += "GET / HTTP/1.1\r\n";
+    request += "Host: :/example.com\r\n";
+    request += "User-AgentMozilla/5.0\r\n";
+    request += "Accept: text/html\r\n";
+    request += "Content-Length: 0\r\n";
+    request += "\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Header without a colon is invalid\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST (RequestParser, ParseEmptyHeader) {
+    std::string request{};
+    request += "GET / HTTP/1.1\r\n";
+    request += "Host: :/example.com\r\n";
+    request += ": content...\r\n";
+    request += "Content-Length: 0\r\n";
+    request += "\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Empty header\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST (RequestParser, ParseInvalidHeaderFormat) {
+    std::string request{};
+    request += "GET / HTTP/1.1\r\n";
+    request += "Host: :/example.com\r\n";
+    request += "User-Agent : Mozilla/5.0\r\n";
+    request += "Content-Length: 0\r\n";
+    request += "\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Invalid header format\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST (RequestParser, ParseEmptyHeaderContent) {
+    std::string request{};
+    request += "GET / HTTP/1.1\r\n";
+    request += "Host: :/example.com\r\n";
+    request += "User-Agent: \r\n";
+    request += "Content-Length: 0\r\n";
+    request += "\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Empty header content\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST (RequestParser, ParseEndOfHeadersNotFound) {
+    std::string request{};
+    request += "GET / HTTP/1.1\r\n";
+    request += "Host: :/example.com\r\n";
+    request += "User-Agent: Mozilla/5.0\r\n";
+    request += "Accept: text/html\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "End of headers not found\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST(RequestParser, ParseDoubleContentLength) {
+    std::string request{};
+    request += "POST / HTTP/1.1\r\n";
+    request += "Host: localhost\r\n";
+    request += "User-Agent: Chrome/16.0\r\n";
+    request += "Accept: text/plain\r\n";
+    request += "Content-Length: 12\r\n";
+    request += "Content-Length: 20\r\n";
+    request += "\r\n";
+    request += "Body to POST\r\n\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Duplicated Content-Length header is invalid\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST(RequestParser, ParseDoubleHost) {
+    std::string request{};
+    request += "POST / HTTP/1.1\r\n";
+    request += "Host: localhost\r\n";
+    request += "Host: malwarehost\r\n";
+    request += "User-Agent: Chrome/16.0\r\n";
+    request += "Accept: text/plain\r\n";
+    request += "Content-Length: 12\r\n";
+    request += "\r\n";
+    request += "Body to POST\r\n\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Duplicated Host header is invalid\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST(RequestParser, ParseDoubleUserAgent) {
+    std::string request{};
+    request += "POST / HTTP/1.1\r\n";
+    request += "Host: localhost\r\n";
+    request += "User-Agent: Chrome/16.0\r\n";
+    request += "User-Agent: malwareagent\r\n";
+    request += "Accept: text/plain\r\n";
+    request += "Content-Length: 12\r\n";
+    request += "\r\n";
+    request += "Body to POST\r\n\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Duplicated User-Agent header is invalid\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST(RequestParser, ParseTransferEncoding) {
+    std::string request{};
+    request += "POST / HTTP/1.1\r\n";
+    request += "Host: localhost\r\n";
+    request += "User-Agent: Chrome/16.0\r\n";
+    request += "Accept: text/plain\r\n";
+    request += "Content-Length: 12\r\n";
+    request += "Transfer-Encoding: chunked\r\n";
+    request += "\r\n";
+    request += "Body to POST\r\n\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Transfer-Encoding => ban\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST(RequestParser, ParseInvalidContentLengthFormat) {
+    std::string request{};
+    request += "POST / HTTP/1.1\r\n";
+    request += "Host: localhost\r\n";
+    request += "User-Agent: Chrome/16.0\r\n";
+    request += "Accept: text/plain\r\n";
+    request += "Content-Length: 12s\r\n";
+    request += "\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Invalid Content-Length value\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
+TEST(RequestParser, ParseRealBodySizeIsBiggerThanContentLength) {
+    std::string request{};
+    request += "POST / HTTP/1.1\r\n";
+    request += "Host: localhost\r\n";
+    request += "User-Agent: Chrome/16.0\r\n";
+    request += "Accept: text/plain\r\n";
+    request += "Content-Length: 3\r\n";
+    request += "\r\n";
+    request += "body";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Real body size is bigger than the Content-Length\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
