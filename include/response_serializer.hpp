@@ -9,7 +9,9 @@ class ResponseSerializer {
         {200, "OK"},
         {400, "Bad request"},
         {404, "Not Found"},
-        {405, "Method Not Allowed"}
+        {405, "Method Not Allowed"},
+        {408, "Request Timeout"},
+        {413, "Request Entity Too Large"}
     };
 
 public:

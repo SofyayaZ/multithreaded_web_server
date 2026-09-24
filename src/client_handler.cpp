@@ -7,26 +7,53 @@
 #include <request_parser.hpp>
 #include <http_response.hpp>
 #include <send_all.hpp>
+#include <chrono>
 
 
 constexpr size_t MAX_HEADER_SIZE = 8192;
 constexpr size_t MAX_BODY_SIZE = 8192;
+constexpr auto REQUEST_RECV_TIMEOUT = std::chrono::seconds(60);
 
 enum class RecvStatus {
     SUCCESS,
     CLOSED,
+    TIMEOUT,
     ERROR
 };
+
+using Clock = std::chrono::steady_clock;
 
 RecvStatus recvData(const Socket& clientSocket,
                     char* buffer,
                     size_t bufferSize,
-                    ssize_t& receivedBytes) {
+                    ssize_t& receivedBytes,
+                    Clock::time_point deadline) {
+    auto remainingTime = 
+        std::chrono::duration_cast<std::chrono::microseconds>(deadline - Clock::now());
+    if (remainingTime.count() <= 0) {
+        return RecvStatus::TIMEOUT;
+    }
+
+    struct timeval timeout{};
+    timeout.tv_sec = remainingTime.count() / 1000000;
+    timeout.tv_usec = remainingTime.count() % 1000000;
+
+    if (setsockopt(clientSocket.get(), 
+                   SOL_SOCKET, SO_RCVTIMEO, 
+                   &timeout, 
+                   sizeof(timeout)) < 0) {
+        std::cerr << "Socket options set failed\n";
+        return RecvStatus::ERROR;
+    }
+
     receivedBytes = recv(clientSocket.get(),
-                               buffer,
-                               bufferSize,
-                               0);
+                         buffer,
+                         bufferSize,
+                         0);
     if (receivedBytes < 0) {
+        if (errno == EWOULDBLOCK || errno == EAGAIN) {
+            return RecvStatus::TIMEOUT;
+        }
         return RecvStatus::ERROR;
     }
     if (receivedBytes == 0) {
@@ -38,34 +65,29 @@ RecvStatus recvData(const Socket& clientSocket,
 void handleClient(const Socket& clientSocket,
                   const Router& router, 
                   const ResponseSerializer& serializer) {
-    // For timeout handling
-    struct timeval timeout{};
-    timeout.tv_sec = 5;
-    timeout.tv_usec = 0;
-
-    // ЗДЕСЬ надо сделать так, чтобы SO_RCVTIMEO действовал не для одного recv, а
-    // для всего процесса чтения сообщения от клиента в целом
-    if (setsockopt(clientSocket.get(), SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-        std::cerr << "Socket options set failed\n";
-        return;
-    }
+    // For timeout handling set deadline
+    auto deadline = Clock::now() + REQUEST_RECV_TIMEOUT;
 
     // For receiving data in buffers and putting them in request
     char buffer[4096];
     ssize_t receivedBytes = 0;
     std::string request;
+    HttpResponse response{};
     // Getting request part by part
     while(request.find("\r\n\r\n") == std::string::npos) {
-        auto receivedData = recvData(clientSocket, buffer, sizeof(buffer), receivedBytes);
+        auto receivedData = recvData(clientSocket,
+                                     buffer, 
+                                     sizeof(buffer), 
+                                     receivedBytes, 
+                                     deadline);
         if (receivedData == RecvStatus::ERROR) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                std::cout << "The client " << clientSocket.get() << " stopped receiving after timeout\n";
-            }
-            else {
-                perror("Failed receiving data from client");
-            }
-
+            perror("Failed receiving data from client");
             return;
+        }
+        if (receivedData == RecvStatus::TIMEOUT) {
+            std::cerr << "Request timeout\n";
+            response.statusCode = 408;
+            break;
         }
         if (receivedData == RecvStatus::CLOSED) {
             std::cout << "The client " << clientSocket.get() << " has been closed\n";
@@ -78,7 +100,15 @@ void handleClient(const Socket& clientSocket,
         request.append(buffer, receivedBytes);
     }
 
-    HttpResponse response{};
+    // Это костыль ... 
+    if (response.statusCode == 408) {
+        std::string serializedResponse = serializer.serializeResponse(response);
+        if (!sendAll(clientSocket.get(), serializedResponse)) {
+            std::cerr << "Response sending failed\n";
+            return;
+        }
+        std::cout << "Message succesfully sent to client " << clientSocket.get() << "\n";
+    }
 
     // Request parsing for bytes from buffer
     auto httpRequest = parseRequest(request);
@@ -87,23 +117,25 @@ void handleClient(const Socket& clientSocket,
         response.statusCode = 400;
     }
     else {
-        if (httpRequest->contentLength > MAX_BODY_SIZE ||
-            httpRequest->body.size() > httpRequest->contentLength) {
+        if (httpRequest->contentLength > MAX_BODY_SIZE) {
+            std::cerr << "Request entity too much";
+            response.statusCode = 413;
+        }
+        else if (httpRequest->body.size() > httpRequest->contentLength) {
             std::cerr << "Bad http request structure\n";
             response.statusCode = 400;
         }
         else if (httpRequest->body.size() < httpRequest->contentLength) {
             while (httpRequest->body.size() < httpRequest->contentLength) {
-                auto receivedData = recvData(clientSocket, buffer, sizeof(buffer), receivedBytes);
+                auto receivedData = recvData(clientSocket, buffer, sizeof(buffer), receivedBytes, deadline);
                 if (receivedData == RecvStatus::ERROR) {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                        std::cout << "The client " << clientSocket.get() << " stopped receiving after timeout\n";
-                    }
-                    else {
-                        perror("Failed receiving data from client");
-                    }
-
+                    perror("Failed receiving data from client");
                     return;
+                }
+                if (receivedData == RecvStatus::TIMEOUT) {
+                    std::cerr << "Request timeout\n";
+                    response.statusCode = 408;
+                    break;
                 }
                 if (receivedData == RecvStatus::CLOSED) {
                     std::cout << "The client " << clientSocket.get() << " has been closed\n";
@@ -121,9 +153,9 @@ void handleClient(const Socket& clientSocket,
     }
 
     // Routing request from client
-    if (response.statusCode != 400){
+    if (httpRequest) {
         response = router.route(*httpRequest);
-    }     
+    }
 
     // Serializing response to string for sending data to client
     std::string serializedResponse = serializer.serializeResponse(response);
