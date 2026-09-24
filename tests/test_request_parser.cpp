@@ -351,6 +351,22 @@ TEST(RequestParser, ParseInvalidContentLengthFormat) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
+TEST(RequestParser, ParseInvalidContentLengtSize) {
+    std::string request{};
+    request += "POST / HTTP/1.1\r\n";
+    request += "Host: localhost\r\n";
+    request += "User-Agent: Chrome/16.0\r\n";
+    request += "Accept: text/plain\r\n";
+    request += "Content-Length: 99999999999999999999999999999\r\n";
+    request += "\r\n";
+    std::stringstream buffer;
+    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
+    auto realParsedRequest = parseRequest(request);
+    std::cerr.rdbuf(old_cerr);
+    EXPECT_EQ(buffer.str(), "Getting Content-Length from stream failed\n");
+    EXPECT_EQ(realParsedRequest, std::nullopt);
+}
+
 TEST(RequestParser, ParseRealBodySizeIsBiggerThanContentLength) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
