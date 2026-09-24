@@ -67,6 +67,11 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
             break;
         }
 
+        if (requestLine.find('\r') == std::string::npos) {
+            std::cerr << "Invalid CRLF\n";
+            return std::nullopt;
+        }
+
         std::string header;
         std::string headerContent;
 
@@ -127,7 +132,7 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
         headerContent = requestLine.substr(colon + 1);
 
         // Deleting '\r' from header content
-        if (headerContent.back() == '\r') {
+        if (!headerContent.empty() && headerContent.back() == '\r') {
             headerContent.pop_back();
         }
         // Deleting ' ' from header content, check if it's empty
@@ -159,13 +164,14 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
         return std::nullopt;
     }
 
-    // Check Host
+    // Find Host
     it = httpRequest.headers.find("host");
     if (it == httpRequest.headers.end()) {
-        std::cerr << "No Host header is invalid header format\n";
+        std::cerr << "Host header is invalid header format\n";
         return std::nullopt;
     }
 
+    // Check host os not empty
     if (it->second == "") {
         std::cerr << "Host cannot be empty\n";
         return std::nullopt;
@@ -173,35 +179,36 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
 
     // Getting the content length
     it = httpRequest.headers.find("content-length");
-    if (it == httpRequest.headers.end()) {
-        std::cout << "No body in request\n";
-        return httpRequest;
-    }
-    
-    const std::string& contentLengthValue = it->second;
-    
-    for (unsigned char c : contentLengthValue) {
-        if (!std::isdigit(c)) {
-            std::cerr << "Invalid Content-Length value\n";
+    if (it != httpRequest.headers.end()) {
+        const std::string& contentLengthValue = it->second;
+        
+        for (unsigned char c : contentLengthValue) {
+            if (!std::isdigit(c)) {
+                std::cerr << "Invalid Content-Length value\n";
+                return std::nullopt;
+            }
+        }
+
+        std::istringstream contentLengthStream(contentLengthValue);
+        if (!(contentLengthStream >> httpRequest.contentLength)) {
+            std::cerr << "Getting Content-Length from stream failed\n";
             return std::nullopt;
         }
     }
 
-    std::istringstream contentLengthStream(contentLengthValue);
-    if (!(contentLengthStream >> httpRequest.contentLength)) {
-        std::cerr << "Getting Content-Length from stream failed\n";
-        return std::nullopt;
-    }
-
+    // Check body
     auto bodyPosition = stringRequest.find("\r\n\r\n");
     if (bodyPosition == std::string::npos) {
-        if (httpRequest.contentLength == 0) {
-            return httpRequest;
-        }
         std::cerr << "The empty line beetwen headers and body is not found\n";
         return std::nullopt;
     }
+    
     httpRequest.body = stringRequest.substr(bodyPosition + 4);
+
+    if (it == httpRequest.headers.end() && !httpRequest.body.empty()) {
+        std::cerr << "Need Content-Length\n";
+        return std::nullopt;
+    }
 
     if (httpRequest.body.size() > httpRequest.contentLength) {
         std::cerr << "Real body size is bigger than the Content-Length\n";
