@@ -1,7 +1,7 @@
 # multithreaded_web_server
 ### Tiny Description
-Linux-based multithreaded http server.
-Supports HTTP/1.1, transfer-encoding is invalid.
+Linux-based multithreaded http server.<br>
+Supports HTTP/1.1, transfer-encoding is invalid.<br>
 Future goals: develop business-logic interface, add HTTP/2.0, HTTP/3.0 support, tests.
 ### Steps To Start
 1. mkdir
