@@ -35,8 +35,9 @@ target_sources(http_server
 
 target_sources(unit_tests
                PRIVATE
-               tests/test_router.cpp
+               tests/test_client_handler.cpp
                tests/test_request_parser.cpp
+               tests/test_router.cpp
 )
 
 # Target libraries
@@ -79,8 +80,7 @@ target_include_directories(project_headers
 # Link libraries
 target_link_libraries(unit_tests
                       PRIVATE
-                      router
-                      request_parser
+                      client_handler
                       GTest::gtest_main
 )
 
