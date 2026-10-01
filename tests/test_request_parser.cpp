@@ -5,7 +5,7 @@
 #include <iostream>
 
 
-TEST(RequestParser, ParseValidGet) {
+TEST(RequestParserTest, ParseValidGet) {
     std::string request{};
     request += "GET / HTTP/1.1\r\n";
     request += "Host: :/example.com\r\n";
@@ -25,7 +25,7 @@ TEST(RequestParser, ParseValidGet) {
     EXPECT_EQ(realParsedRequest->body, expectedParsedRequest.body);
 }
 
-TEST(RequestParser, ParseDifferentCaseHeaders) {
+TEST(RequestParserTest, ParseDifferentCaseHeaders) {
     std::string request{};
     request += "GET / HTTP/1.1\r\n";
     request += "HoSt: :/example.com\r\n";
@@ -45,7 +45,7 @@ TEST(RequestParser, ParseDifferentCaseHeaders) {
     EXPECT_EQ(realParsedRequest->body, expectedParsedRequest.body);
 }
 
-TEST(RequestParser, ParseValidPost) {
+TEST(RequestParserTest, ParseValidPost) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
     request += "Host: localhost\r\n";
@@ -71,7 +71,7 @@ TEST(RequestParser, ParseValidPost) {
     EXPECT_EQ(realParsedRequest->body, expectedParsedRequest.body);
 }
 
-TEST(RequestParser, ParsePartialBody) {
+TEST(RequestParserTest, ParsePartialBody) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
     request += "Host: localhost\r\n";
@@ -97,7 +97,7 @@ TEST(RequestParser, ParsePartialBody) {
     EXPECT_EQ(realParsedRequest->body, expectedParsedRequest.body);
 }
 
-TEST(RequestParser, ParseZeroContentLength) {
+TEST(RequestParserTest, ParseZeroContentLength) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
     request += "Host: localhost\r\n";
@@ -120,7 +120,7 @@ TEST(RequestParser, ParseZeroContentLength) {
     EXPECT_EQ(realParsedRequest->body, expectedParsedRequest.body);
 }
 
-TEST (RequestParser, ParseExtraWords) {
+TEST (RequestParserTest, ParseExtraWords) {
     std::string request{};
     request += "GET / HTTP/1.1 garbageeee\r\n";
     std::stringstream buffer;
@@ -131,7 +131,7 @@ TEST (RequestParser, ParseExtraWords) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST (RequestParser, ParseWrongHTTPVersion) {
+TEST (RequestParserTest, ParseWrongHTTPVersion) {
     std::string request{};
     request += "GET / HTTP/0.1\r\n";
     std::stringstream buffer;
@@ -142,7 +142,7 @@ TEST (RequestParser, ParseWrongHTTPVersion) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST (RequestParser, ParseWrongLF) {
+TEST (RequestParserTest, ParseWrongLF) {
     std::string request{};
     request += "GET / HTTP/1.1\r\n";
     request += "Host: :/example.com\n";
@@ -157,7 +157,7 @@ TEST (RequestParser, ParseWrongLF) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST (RequestParser, ParseNoColonInHeader) {
+TEST (RequestParserTest, ParseNoColonInHeader) {
     std::string request{};
     request += "GET / HTTP/1.1\r\n";
     request += "Host: :/example.com\r\n";
@@ -173,7 +173,7 @@ TEST (RequestParser, ParseNoColonInHeader) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST (RequestParser, ParseEmptyHeader) {
+TEST (RequestParserTest, ParseEmptyHeader) {
     std::string request{};
     request += "GET / HTTP/1.1\r\n";
     request += "Host: :/example.com\r\n";
@@ -188,7 +188,7 @@ TEST (RequestParser, ParseEmptyHeader) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST (RequestParser, ParseInvalidHeaderFormat) {
+TEST (RequestParserTest, ParseInvalidHeaderFormat) {
     std::string request{};
     request += "GET / HTTP/1.1\r\n";
     request += "Host: :/example.com\r\n";
@@ -203,7 +203,7 @@ TEST (RequestParser, ParseInvalidHeaderFormat) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST (RequestParser, ParseHeaderWithInvalidSpecialSymbols) {
+TEST (RequestParserTest, ParseHeaderWithInvalidSpecialSymbols) {
     std::string request{};
     request += "GET / HTTP/1.1\r\n";
     request += "Ho\tst: :/example.com\r\n";
@@ -218,7 +218,7 @@ TEST (RequestParser, ParseHeaderWithInvalidSpecialSymbols) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST (RequestParser, ParseHeaderWithValidSpecialSymbols) {
+TEST (RequestParserTest, ParseHeaderWithValidSpecialSymbols) {
     std::string request{};
     request += "GET / HTTP/1.1\r\n";
     request += "Host: :/example.com\r\n";
@@ -234,7 +234,7 @@ TEST (RequestParser, ParseHeaderWithValidSpecialSymbols) {
     EXPECT_EQ(realParsedRequest->headers, expectedParsedRequest.headers);
 }
 
-TEST (RequestParser, ParseEmptyHeaderContent) {
+TEST (RequestParserTest, ParseEmptyHeaderContent) {
     std::string request{};
     request += "GET / HTTP/1.1\r\n";
     request += "Host: :/example.com\r\n";
@@ -249,7 +249,7 @@ TEST (RequestParser, ParseEmptyHeaderContent) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST (RequestParser, ParseEndOfHeadersNotFound) {
+TEST (RequestParserTest, ParseEndOfHeadersNotFound) {
     std::string request{};
     request += "GET / HTTP/1.1\r\n";
     request += "Host: :/example.com\r\n";
@@ -263,7 +263,7 @@ TEST (RequestParser, ParseEndOfHeadersNotFound) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST(RequestParser, ParseDoubleContentLength) {
+TEST(RequestParserTest, ParseDoubleContentLength) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
     request += "Host: localhost\r\n";
@@ -281,7 +281,7 @@ TEST(RequestParser, ParseDoubleContentLength) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST(RequestParser, ParseDoubleHost) {
+TEST(RequestParserTest, ParseDoubleHost) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
     request += "Host: localhost\r\n";
@@ -299,7 +299,7 @@ TEST(RequestParser, ParseDoubleHost) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST(RequestParser, ParseDoubleUserAgent) {
+TEST(RequestParserTest, ParseDoubleUserAgent) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
     request += "Host: localhost\r\n";
@@ -317,7 +317,7 @@ TEST(RequestParser, ParseDoubleUserAgent) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST(RequestParser, ParseTransferEncoding) {
+TEST(RequestParserTest, ParseTransferEncoding) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
     request += "Host: localhost\r\n";
@@ -335,7 +335,7 @@ TEST(RequestParser, ParseTransferEncoding) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST(RequestParser, ParseInvalidContentLengthFormat) {
+TEST(RequestParserTest, ParseInvalidContentLengthFormat) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
     request += "Host: localhost\r\n";
@@ -351,7 +351,7 @@ TEST(RequestParser, ParseInvalidContentLengthFormat) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST(RequestParser, ParseInvalidContentLengtSize) {
+TEST(RequestParserTest, ParseInvalidContentLengtSize) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
     request += "Host: localhost\r\n";
@@ -367,7 +367,7 @@ TEST(RequestParser, ParseInvalidContentLengtSize) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST(RequestParser, ParseRealBodySizeIsBiggerThanContentLength) {
+TEST(RequestParserTest, ParseRealBodySizeIsBiggerThanContentLength) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
     request += "Host: localhost\r\n";
@@ -384,7 +384,7 @@ TEST(RequestParser, ParseRealBodySizeIsBiggerThanContentLength) {
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
-TEST(RequestParser, ParseBodyWithNoContentLength) {
+TEST(RequestParserTest, ParseBodyWithNoContentLength) {
     std::string request{};
     request += "POST / HTTP/1.1\r\n";
     request += "Host: localhost\r\n";
