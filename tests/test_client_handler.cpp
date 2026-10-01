@@ -19,7 +19,7 @@ protected:
         return {200, "This is home page", {}};
     }
 
-    void sendRequest(std::string request) {
+    void sendRequest(const std::string& request) {
         ASSERT_EQ(
             send(clientSocket, request.data(), request.size(), 0),
             static_cast<ssize_t>(request.size())
@@ -45,16 +45,14 @@ protected:
 
 
 TEST_F(ClientHandlerTest, HandleGETValid) {
-    router.addRoute("GET", "/", [](const HttpRequest& request)->HttpResponse {
-        return HttpResponse{200, request.body, {}};
+    router.addRoute("GET", "/", [](const HttpRequest&)->HttpResponse {
+        return HttpResponse{200, "Hello", {}};
     });
 
     const std::string request{
         "GET / HTTP/1.1\r\n"
         "Host: localhost\r\n"
-        "Content-Length: 15\r\n"
         "\r\n"
-        "Hello from POST"
     };
 
     sendRequest(request);
@@ -69,12 +67,12 @@ TEST_F(ClientHandlerTest, HandleGETValid) {
     const std::string response(buffer, received);
 
     EXPECT_NE(response.find("200"), std::string::npos);
-    EXPECT_NE(response.find("Hello from POST"), std::string::npos);
+    EXPECT_NE(response.find("Hello"), std::string::npos);
 }
 
 TEST_F(ClientHandlerTest, HandlePOSTValid) {
-    router.addRoute("POST", "/", [](const HttpRequest&)->HttpResponse {
-        return HttpResponse{200, "Successfully test POST", {}};
+    router.addRoute("POST", "/", [](const HttpRequest& request)->HttpResponse {
+        return HttpResponse{200, request.body, {}};
     });
 
     const std::string request{
@@ -96,7 +94,8 @@ TEST_F(ClientHandlerTest, HandlePOSTValid) {
 
     const std::string response(buffer, received);
 
-    EXPECT_NE(response.find("Successfully test POST"), std::string::npos);
+    EXPECT_NE(response.find("200"), std::string::npos);
+    EXPECT_NE(response.find("Body of POST"), std::string::npos);
 }
 
 TEST_F(ClientHandlerTest, HandlePartialBody) {
@@ -104,29 +103,25 @@ TEST_F(ClientHandlerTest, HandlePartialBody) {
         return HttpResponse{200, "Successfully POSTED", {}};
     });
 
-    const std::string firstPart{
+    const std::string body(5000, 'z');
+
+    const std::string request{
         "POST / HTTP/1.1\r\n"
         "Host: localhost\r\n"
-        "Content-Length: 12\r\n"
-        "\r\n"
-        "part of b"
+        "Content-Length: 5000\r\n"
+        "\r\n" + body
     };
-    const std::string secondPart{"ody"};
 
-    sendRequest(firstPart);
+    sendRequest(request);
 
     std::thread handleThread([&]{
         handleClient(*serverSocket, router, serializer);
     });
 
-    ASSERT_EQ(send(clientSocket, secondPart.data(), secondPart.size(), 0),
-              static_cast<ssize_t>(secondPart.size())
-    );
-
-    handleThread.join();
-
     char buffer[4096];
     ssize_t receivedBytes = recv(clientSocket, buffer, sizeof(buffer), 0);
+
+    handleThread.join();
 
     const std::string response(buffer, receivedBytes);
     EXPECT_NE(response.find("200"), std::string::npos);
@@ -197,7 +192,7 @@ TEST_F(ClientHandlerTest, HandleUnknownEndpoint) {
     EXPECT_NE(response.find("Not Found"), std::string::npos);
 }
 
-TEST_F(ClientHandlerTest, HandlePartialUnsupportedMethod) {
+TEST_F(ClientHandlerTest, HandleUnsupportedMethod) {
     router.addRoute("GET", "/", [](const HttpRequest&)->HttpResponse {
         return HttpResponse{200, "Hello", {}};
     });
