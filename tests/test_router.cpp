@@ -64,7 +64,7 @@ TEST(RouterTest, DeleteExistingRouteReturns405) {
 
     HttpRequest request{"DELETE", "/hello", "HTTP/1.1"};
     HttpResponse realResponse = router.route(request);
-    HttpResponse expectedResponse{405, "Method Not Allowed", {{"Allow", "GET, POST"}}};
+    HttpResponse expectedResponse{405, "Method Not Allowed\nAllowed Methods: GET, POST\n", {{"Allow", "GET, POST"}}};
 
     EXPECT_EQ(realResponse.statusCode, expectedResponse.statusCode);
     EXPECT_EQ(realResponse.body, expectedResponse.body);
