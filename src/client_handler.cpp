@@ -8,6 +8,7 @@
 #include <http_response.hpp>
 #include <send_all.hpp>
 #include <chrono>
+#include <send_response.hpp>
 
 
 constexpr size_t MAX_HEADER_SIZE = 8192;
@@ -65,6 +66,12 @@ RecvStatus recvData(const Socket& clientSocket,
 void handleClient(const Socket& clientSocket,
                   const Router& router, 
                   const ResponseSerializer& serializer) {
+
+    /////////////////////////////////////////
+    // Recving data from client and        //
+    // putting it into std::string request //
+    /////////////////////////////////////////
+
     // For timeout handling set deadline
     auto deadline = Clock::now() + REQUEST_RECV_TIMEOUT;
 
@@ -87,7 +94,8 @@ void handleClient(const Socket& clientSocket,
         if (receivedData == RecvStatus::TIMEOUT) {
             std::cerr << "Request timeout\n";
             response.statusCode = 408;
-            break;
+            sendResponse(clientSocket, serializer, response);
+            return;
         }
         if (receivedData == RecvStatus::CLOSED) {
             std::cout << "The client " << clientSocket.get() << " has been closed\n";
@@ -98,34 +106,40 @@ void handleClient(const Socket& clientSocket,
             return;
         }
         request.append(buffer, receivedBytes);
-    }
+    }    
 
-    // Это костыль ... 
-    if (response.statusCode == 408) {
-        std::string serializedResponse = serializer.serializeResponse(response);
-        if (!sendAll(clientSocket.get(), serializedResponse)) {
-            std::cerr << "Response sending failed\n";
-            return;
-        }
-        std::cout << "Message succesfully sent to client " << clientSocket.get() << "\n";
-    }
+    //////////////////////////////////
+    // Parsing std::string request  //
+    // Here we can get std::nullopt //
+    // or HttpRequest               //
+    //////////////////////////////////
 
     // Request parsing for bytes from buffer
     auto httpRequest = parseRequest(request);
     if (!httpRequest) {
         std::cerr << "Bad http request structure\n";
         response.statusCode = 400;
+        sendResponse(clientSocket, serializer, response);
+        return;
     }
     else {
+        // Check parsed request body size
         if (httpRequest->contentLength > MAX_BODY_SIZE) {
             std::cerr << "Request entity too much";
             response.statusCode = 413;
+            sendResponse(clientSocket, serializer, response);
+            return;
         }
         else if (httpRequest->body.size() > httpRequest->contentLength) {
             std::cerr << "Bad http request structure\n";
             response.statusCode = 400;
+            sendResponse(clientSocket, serializer, response);
+            return;
         }
-        else if (httpRequest->body.size() < httpRequest->contentLength) {
+        else {
+            /////////////////////////////////////////////////////////////
+            // Recving body if and while it's less than Content-Length //
+            /////////////////////////////////////////////////////////////
             while (httpRequest->body.size() < httpRequest->contentLength) {
                 auto receivedData = recvData(clientSocket, buffer, sizeof(buffer), receivedBytes, deadline);
                 if (receivedData == RecvStatus::ERROR) {
@@ -135,7 +149,8 @@ void handleClient(const Socket& clientSocket,
                 if (receivedData == RecvStatus::TIMEOUT) {
                     std::cerr << "Request timeout\n";
                     response.statusCode = 408;
-                    break;
+                    sendResponse(clientSocket, serializer, response);
+                    return;
                 }
                 if (receivedData == RecvStatus::CLOSED) {
                     std::cout << "The client " << clientSocket.get() << " has been closed\n";
@@ -145,27 +160,24 @@ void handleClient(const Socket& clientSocket,
                     httpRequest->body.size() + receivedBytes > MAX_BODY_SIZE) {
                     std::cerr << "Bad http request structure\n";
                     response.statusCode = 400;
-                    break;
+                    sendResponse(clientSocket, serializer, response);
+                    return;
                 }
                 httpRequest->body.append(buffer, receivedBytes);
             }
         }
     }
 
-    // Routing request from client
+    /////////////////////////////////
+    // Routing request from client //
+    /////////////////////////////////
     if (httpRequest) {
         response = router.route(*httpRequest);
     }
 
-    // Serializing response to string for sending data to client
-    std::string serializedResponse = serializer.serializeResponse(response);
-
-    // Sending response to client
-    if (!sendAll(clientSocket.get(), serializedResponse)) {
-        std::cerr << "Response sending failed\n";
-        return;
-    }
-
-    std::cout << "Message succesfully sent to client " << clientSocket.get() << "\n";
+    ////////////////////////////////
+    // Sending response to client //
+    ////////////////////////////////
+    sendResponse(clientSocket, serializer, response);
     return;
 }
