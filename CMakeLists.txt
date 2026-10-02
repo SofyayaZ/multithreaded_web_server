@@ -23,6 +23,7 @@ add_library(router)
 add_library(request_parser)
 add_library(response_serializer)
 add_library(send_all)
+add_library(send_response)
 add_library(client_handler)
 add_library(thread_pool)
 add_library(project_headers INTERFACE)
@@ -59,6 +60,11 @@ target_sources(response_serializer
 target_sources(send_all
                PRIVATE
                src/send_all.cpp
+)
+
+target_sources(send_response
+               PRIVATE
+               src/send_response.cpp
 )
 
 target_sources(client_handler
@@ -104,6 +110,13 @@ target_link_libraries(send_all
                       project_headers
 )
 
+target_link_libraries(send_response
+                      PUBLIC
+                      project_headers
+                      send_all
+                      response_serializer
+)
+
 target_link_libraries(thread_pool
                       PUBLIC
                       project_headers
@@ -114,8 +127,7 @@ target_link_libraries(client_handler
                       PUBLIC
                       router
                       request_parser
-                      response_serializer
-                      send_all
+                      send_response
 )
 
 target_link_libraries(http_server
