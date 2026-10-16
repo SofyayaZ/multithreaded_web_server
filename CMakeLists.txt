@@ -15,7 +15,7 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
 # Executable + test
-add_executable(http_server)
+add_executable(main)
 add_executable(unit_tests)
 
 # Internal libraries
@@ -28,10 +28,12 @@ add_library(client_handler)
 add_library(thread_pool)
 add_library(project_headers INTERFACE)
 
-# Target executable
-target_sources(http_server
+add_library(http_server)
+
+# Target sources for executables
+target_sources(main
                PRIVATE
-               src/http_server.cpp
+               src/main.cpp
 )
 
 target_sources(unit_tests
@@ -41,41 +43,17 @@ target_sources(unit_tests
                tests/test_router.cpp
 )
 
-# Target libraries
-target_sources(router
-               PRIVATE
-               src/router.cpp
-)
+# Target sources for libraries
+target_sources(router               PRIVATE src/router.cpp)
+target_sources(request_parser       PRIVATE src/request_parser.cpp)
+target_sources(response_serializer  PRIVATE src/response_serializer.cpp)
+target_sources(send_all             PRIVATE src/send_all.cpp)
+target_sources(send_response        PRIVATE src/send_response.cpp)
+target_sources(client_handler       PRIVATE src/client_handler.cpp)
+target_sources(thread_pool          PRIVATE src/thread_pool.cpp)
 
-target_sources(request_parser
-               PRIVATE
-               src/request_parser.cpp
-)
-
-target_sources(response_serializer
-               PRIVATE
-               src/response_serializer.cpp
-)
-
-target_sources(send_all
-               PRIVATE
-               src/send_all.cpp
-)
-
-target_sources(send_response
-               PRIVATE
-               src/send_response.cpp
-)
-
-target_sources(client_handler
-               PRIVATE
-               src/client_handler.cpp
-)
-
-target_sources(thread_pool
-               PRIVATE
-               src/thread_pool.cpp
-)
+# HTTP Server iself
+target_sources(http_server PRIVATE src/http_server.cpp)
 
 # Include directory
 target_include_directories(project_headers
@@ -83,32 +61,17 @@ target_include_directories(project_headers
                            ${CMAKE_SOURCE_DIR}/include
 )
 
-# Link libraries
+# Link libraries to targets
 target_link_libraries(unit_tests
                       PRIVATE
                       client_handler
                       GTest::gtest_main
 )
 
-target_link_libraries(router
-                      PUBLIC
-                      project_headers
-)
-
-target_link_libraries(request_parser
-                      PUBLIC
-                      project_headers
-)
-
-target_link_libraries(response_serializer
-                      PUBLIC
-                      project_headers
-)
-
-target_link_libraries(send_all
-                      PUBLIC
-                      project_headers
-)
+target_link_libraries(router                PUBLIC project_headers)
+target_link_libraries(request_parser        PUBLIC project_headers)
+target_link_libraries(response_serializer   PUBLIC project_headers)
+target_link_libraries(send_all              PUBLIC project_headers)
 
 target_link_libraries(send_response
                       PUBLIC
@@ -130,9 +93,6 @@ target_link_libraries(client_handler
                       send_response
 )
 
-target_link_libraries(http_server
-                      PRIVATE
-                      thread_pool
-)
+target_link_libraries(main PRIVATE thread_pool)
 
 gtest_discover_tests(unit_tests)

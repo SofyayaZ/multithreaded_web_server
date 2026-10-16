@@ -1,4 +1,9 @@
 #include <http_server.hpp>
+#include <router.hpp>
+#include <application_request.hpp>
+#include <application_response.hpp>
+#include <functional>
+#include <string>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -22,23 +27,32 @@
 #include <socket.hpp>
 
 
-void handleSignal(int signal) {
-    if (signal == SIGINT) {
-        stop = 1;
-    }
-}
+class HttpServer {
+    Router router = Router();
+    int port = 8080;
+    bool flagStop = false;
+public:
+    int run(int port);
+    void get(std::string enpoint, std::function<ApplicationResponse(const ApplicationRequest& request)> handler);
+    void post(std::string enpoint, std::function<ApplicationResponse(const ApplicationRequest& request)> handler);
+    void stop();
+};
 
-int main() {
+int HttpServer::run (int port) {
     // For handling POSIX-signals
-    struct sigaction sa{};
-    sa.sa_handler = &handleSignal;
-    sigemptyset(&sa.sa_mask);     // do not block extra signals
-    sa.sa_flags = 0;
+    // struct sigaction sa{};
+    // sa.sa_handler = [&](int signal) {
+    //     if (signal == SIGINT) {
+    //         flagStop = 1;
+    //     }
+    // };
+    // sigemptyset(&sa.sa_mask);     // do not block extra signals
+    // sa.sa_flags = 0;
 
-    if (sigaction(SIGINT, &sa, NULL) == -1) {
-        perror("Failed to call sigaction");
-        return 1;
-    }
+    // if (sigaction(SIGINT, &sa, NULL) == -1) {
+    //     perror("Failed to call sigaction");
+    //     return 1;
+    // }
 
     // Creating server socket
     int serverFd = 0;
@@ -59,10 +73,10 @@ int main() {
     // Creating sockaddr and binding it to server socket
     sockaddr_in serverAddress{};
     serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(8080);
+    serverAddress.sin_port = htons(port);
     serverAddress.sin_addr.s_addr = INADDR_ANY;
 
-    if ( bind(serverFd, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0) {
+    if (bind(serverFd, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0) {
         perror("Binding failed\n");
         close(serverFd);
         std::cout << "Server socket " << serverFd << " has been closed\n";
@@ -72,7 +86,7 @@ int main() {
     std::cout << "Server socket bound to port 8080 and all IPv4 interfaces\n";
 
     // Set server socket listening
-    if ( listen(serverFd, 10) < 0) {
+    if (listen(serverFd, 10) < 0) {
         perror("Listening failed\n");
         close(serverFd);
         std::cout << "Server socket " << serverFd << " has been closed\n";
@@ -81,11 +95,6 @@ int main() {
 
     std::cout << "Socket " << serverFd << " is listening\n";
 
-    // Creating router and adding routes
-    Router router = Router();
-    router.addRoute("GET", "/", homeHandler);
-    router.addRoute("GET", "/hello", helloHandler);
-    router.addRoute("POST", "/hello", postHelloHandler);
     //Creating serializer (HttpResponse -> std::string)
     ResponseSerializer serializer = ResponseSerializer();
 
@@ -93,14 +102,14 @@ int main() {
     ThreadPool threadPool = ThreadPool(4, router, serializer);
 
     // Handling client's requests
-    while(!stop) {
+    while(!flagStop) {
         // Creating address for client and accepting client connection request
         sockaddr clientAddress{};
         socklen_t len = sizeof(clientAddress);
         int clientFd = 0;
 
         if ( (clientFd = accept(serverFd, &clientAddress, &len)) < 0) {
-            if (errno == EINTR && stop) {
+            if (errno == EINTR && flagStop) {
                 break;
             }
             std::cerr << "Failed to accept client connection\n";
@@ -118,4 +127,28 @@ int main() {
     std::cout << "Server socket " << serverFd << " has been closed\n";
 
     return 0;
+}
+
+void HttpServer::get(
+    std::string endpoint, 
+    std::function<ApplicationResponse(const ApplicationRequest& request)> appHandler) {
+    
+    // парсинг appHandler приложения в httpHandler
+    // std::function<HttpResponse(const HttpRequest& request)> httpHandler = adapt(appHandler);
+    // router.addRoute("GET", endpoint, httpHandler);
+}
+
+void HttpServer::post(
+    std::string endpoint, 
+    std::function<ApplicationResponse(const ApplicationRequest& request)> appHandler) {
+
+    // парсинг appHandler приложения в httpHandler
+    // std::function<HttpResponse(const HttpRequest& request)> httpHandler = adapt(appHandler);
+    // router.addRoute("POST", endpoint, httpHandler);
+}
+
+void HttpServer::stop() {
+    this->flagStop = true;
+
+    // здесь пока ещё не произойдёт полноценной остановки программы...
 }
