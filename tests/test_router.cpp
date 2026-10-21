@@ -1,6 +1,7 @@
+#include "routing/router.hpp"
+#include "http/http_response.hpp"
+
 #include <gtest/gtest.h>
-#include <router.hpp>
-#include <http_response.hpp>
 
 
 HttpResponse homeHandler(const HttpRequest& request) {

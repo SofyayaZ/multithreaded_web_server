@@ -1,9 +1,9 @@
-#include <send_response.hpp>
+#include "send_response.hpp"
 
-#include <socket.hpp>
-#include <response_serializer.hpp>
-#include <http_response.hpp>
-#include <send_all.hpp>
+#include "server/socket.hpp"
+#include "response_serializer.hpp"
+#include "http_response.hpp"
+#include "send_all.hpp"
 #include <iostream>
 
 

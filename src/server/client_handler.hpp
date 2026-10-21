@@ -1,8 +1,8 @@
 #pragma once
 
-#include <socket.hpp>
-#include <router.hpp>
-#include <response_serializer.hpp>
+#include "socket.hpp"
+#include "routing/router.hpp"
+#include "http/response_serializer.hpp"
 
 
 void handleClient(const Socket& clientSocket,

@@ -1,4 +1,4 @@
-#include <request_parser.hpp>
+#include "request_parser.hpp"
 
 #include <sstream>
 #include <iostream>
@@ -7,24 +7,24 @@
 
 bool isValidHeader(const std::string& header) {
     return std::all_of(header.begin(), header.end(), [](unsigned char c)->bool {
-        return c >= 'a' && c <='z' ||
-               c >= 'A' && c <= 'Z' ||
-               c >= '0' && c <= '9' ||
-               c == '!' ||
-               c == '#' ||
-               c == '$' ||
-               c == '%' ||
-               c == '&' ||
-               c == '\''||
-               c == '*' ||
-               c == '+' ||
-               c == '-' ||
-               c == '.' ||
-               c == '^' ||
-               c == '_' ||
-               c == '`' ||
-               c == '|' ||
-               c == '~';
+        return ((c >= 'a') && (c <='z'))  ||
+               ((c >= 'A') && (c <= 'Z')) ||
+               ((c >= '0') && (c <= '9')) ||
+               (c == '!') ||
+               (c == '#') ||
+               (c == '$') ||
+               (c == '%') ||
+               (c == '&') ||
+               (c == '\'')||
+               (c == '*') ||
+               (c == '+') ||
+               (c == '-') ||
+               (c == '.') ||
+               (c == '^') ||
+               (c == '_') ||
+               (c == '`') ||
+               (c == '|') ||
+               (c == '~') ;
     });
 }
 

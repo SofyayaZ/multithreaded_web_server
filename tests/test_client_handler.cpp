@@ -1,11 +1,12 @@
+#include "server/client_handler.hpp"
+#include "server/socket.hpp"
+#include "routing/router.hpp"
+#include "http/response_serializer.hpp"
+
 #include <gtest/gtest.h>
 #include <sys/socket.h>
 #include <thread>
 #include <chrono>
-#include <client_handler.hpp>
-#include <socket.hpp>
-#include <router.hpp>
-#include <response_serializer.hpp>
 
 
 class ClientHandlerTest: public ::testing::Test {

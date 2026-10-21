@@ -1,5 +1,53 @@
 cmake_minimum_required(VERSION 3.25)
 project ("my super server" LANGUAGES CXX)
+
+# Dependencies
+find_package(Threads REQUIRED)
+
+# Unit tests
+add_executable(unit_tests)
+
+# Server library
+add_library(http_server_lib STATIC 
+            src/adapters/adapt_handler.cpp 
+
+            src/http/request_parser.cpp 
+            src/http/response_serializer.cpp 
+            src/http/send_all.cpp 
+            src/http/send_response.cpp 
+
+            src/routing/router.cpp 
+
+            src/server/client_handler.cpp 
+            src/server/http_server.cpp 
+            src/server/thread_pool.cpp 
+)
+
+# Public API headers
+target_include_directories(http_server_lib
+                           PUBLIC
+                           ${PROJECT_SOURCE_DIR}/include 
+                           PRIVATE 
+                           ${PROJECT_SOURCE_DIR}/src
+)
+
+# Threads is required by implementation
+target_link_libraries(http_server_lib PRIVATE Threads::Threads)
+
+#Compile warnings
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(http_server_lib 
+                           PRIVATE 
+                           -Wall 
+                           -Wextra
+    )
+endif()
+
+# Server executable
+add_executable(http_server src/main.cpp)
+target_link_libraries(http_server PRIVATE http_server_lib)
+
+#Tests
 enable_testing()
 
 # GoogleTest external library
@@ -13,28 +61,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
-
-# Executable + test
-add_executable(main)
-add_executable(unit_tests)
-
-# Internal libraries
-add_library(router)
-add_library(request_parser)
-add_library(response_serializer)
-add_library(send_all)
-add_library(send_response)
-add_library(client_handler)
-add_library(thread_pool)
-add_library(project_headers INTERFACE)
-
-add_library(http_server)
-
-# Target sources for executables
-target_sources(main
-               PRIVATE
-               src/main.cpp
-)
+include(CTest)
 
 target_sources(unit_tests
                PRIVATE
@@ -43,56 +70,15 @@ target_sources(unit_tests
                tests/test_router.cpp
 )
 
-# Target sources for libraries
-target_sources(router               PRIVATE src/router.cpp)
-target_sources(request_parser       PRIVATE src/request_parser.cpp)
-target_sources(response_serializer  PRIVATE src/response_serializer.cpp)
-target_sources(send_all             PRIVATE src/send_all.cpp)
-target_sources(send_response        PRIVATE src/send_response.cpp)
-target_sources(client_handler       PRIVATE src/client_handler.cpp)
-target_sources(thread_pool          PRIVATE src/thread_pool.cpp)
-
-# HTTP Server iself
-target_sources(http_server PRIVATE src/http_server.cpp)
-
-# Include directory
-target_include_directories(project_headers
-                           INTERFACE
-                           ${CMAKE_SOURCE_DIR}/include
+target_include_directories(unit_tests
+                           PRIVATE
+                           ${PROJECT_SOURCE_DIR}/src
 )
 
-# Link libraries to targets
 target_link_libraries(unit_tests
                       PRIVATE
-                      client_handler
+                      http_server_lib
                       GTest::gtest_main
 )
-
-target_link_libraries(router                PUBLIC project_headers)
-target_link_libraries(request_parser        PUBLIC project_headers)
-target_link_libraries(response_serializer   PUBLIC project_headers)
-target_link_libraries(send_all              PUBLIC project_headers)
-
-target_link_libraries(send_response
-                      PUBLIC
-                      project_headers
-                      send_all
-                      response_serializer
-)
-
-target_link_libraries(thread_pool
-                      PUBLIC
-                      project_headers
-                      client_handler
-)
-
-target_link_libraries(client_handler
-                      PUBLIC
-                      router
-                      request_parser
-                      send_response
-)
-
-target_link_libraries(main PRIVATE thread_pool)
 
 gtest_discover_tests(unit_tests)

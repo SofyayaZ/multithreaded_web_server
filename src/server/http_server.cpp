@@ -1,8 +1,7 @@
-#include <http_server.hpp>
-#include <router.hpp>
-#include <application_request.hpp>
-#include <application_response.hpp>
-#include <functional>
+#include "http_server.hpp"
+
+#include "app_interface/application_handler.hpp"
+#include "http/http_handler.hpp"
 #include <string>
 
 #include <sys/socket.h>
@@ -15,28 +14,19 @@
 #include <optional>
 #include <functional>
 #include <thread>
+#include <memory>
 
-#include <http_request.hpp>
-#include <http_response.hpp>
-#include <router.hpp>
-#include <response_handlers.hpp>
-#include <request_parser.hpp>
-#include <response_serializer.hpp>
-#include <client_handler.hpp>
-#include <thread_pool.hpp>
-#include <socket.hpp>
+#include "routing/router.hpp"
+#include "http/request_parser.hpp"
+#include "http/response_serializer.hpp"
+#include "client_handler.hpp"
+#include "thread_pool.hpp"
+#include "socket.hpp"
 
 
-class HttpServer {
-    Router router = Router();
-    int port = 8080;
-    bool flagStop = false;
-public:
-    int run(int port);
-    void get(std::string enpoint, std::function<ApplicationResponse(const ApplicationRequest& request)> handler);
-    void post(std::string enpoint, std::function<ApplicationResponse(const ApplicationRequest& request)> handler);
-    void stop();
-};
+HttpServer::HttpServer() : router(std::make_unique<Router>()) {}
+
+HttpServer::~HttpServer() = default;
 
 int HttpServer::run (int port) {
     // For handling POSIX-signals
@@ -83,7 +73,7 @@ int HttpServer::run (int port) {
         return 1;
     }
 
-    std::cout << "Server socket bound to port 8080 and all IPv4 interfaces\n";
+    std::cout << "Server socket bound to port " << port << " and all IPv4 interfaces\n";
 
     // Set server socket listening
     if (listen(serverFd, 10) < 0) {
@@ -99,7 +89,7 @@ int HttpServer::run (int port) {
     ResponseSerializer serializer = ResponseSerializer();
 
     // ThreadPool for accepting clients' connections
-    ThreadPool threadPool = ThreadPool(4, router, serializer);
+    ThreadPool threadPool = ThreadPool(4, *router, serializer);
 
     // Handling client's requests
     while(!flagStop) {
@@ -131,20 +121,22 @@ int HttpServer::run (int port) {
 
 void HttpServer::get(
     std::string endpoint, 
-    std::function<ApplicationResponse(const ApplicationRequest& request)> appHandler) {
+    ApplicationHandler appHandler
+) {
     
     // парсинг appHandler приложения в httpHandler
-    // std::function<HttpResponse(const HttpRequest& request)> httpHandler = adapt(appHandler);
-    // router.addRoute("GET", endpoint, httpHandler);
+    // HttpHadnler httpHandler = adapt(appHandler);
+    // router->addRoute("GET", endpoint, httpHandler);
 }
 
 void HttpServer::post(
     std::string endpoint, 
-    std::function<ApplicationResponse(const ApplicationRequest& request)> appHandler) {
+    ApplicationHandler appHandler
+) {
 
     // парсинг appHandler приложения в httpHandler
-    // std::function<HttpResponse(const HttpRequest& request)> httpHandler = adapt(appHandler);
-    // router.addRoute("POST", endpoint, httpHandler);
+    // HttpHandler httpHandler = adapt(appHandler);
+    // router->addRoute("POST", endpoint, httpHandler);
 }
 
 void HttpServer::stop() {
