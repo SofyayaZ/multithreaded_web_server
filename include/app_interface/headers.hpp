@@ -1,8 +1,9 @@
 #pragma once
 
+#include <cctype>
+#include <optional>
 #include <string>
 #include <vector>
-#include <optional>
 
 
 class Headers {

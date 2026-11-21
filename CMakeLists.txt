@@ -40,6 +40,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
                            PRIVATE 
                            -Wall 
                            -Wextra
+                           -Werror
     )
 endif()
 
