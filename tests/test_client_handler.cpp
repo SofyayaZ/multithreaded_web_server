@@ -1,12 +1,13 @@
+#include "app_interface/server_config.hpp"
+#include "http/response_serializer.hpp"
+#include "routing/router.hpp"
 #include "server/client_handler.hpp"
 #include "server/socket.hpp"
-#include "routing/router.hpp"
-#include "http/response_serializer.hpp"
 
+#include <chrono>
 #include <gtest/gtest.h>
 #include <sys/socket.h>
 #include <thread>
-#include <chrono>
 
 
 class ClientHandlerTest: public ::testing::Test {
@@ -16,6 +17,7 @@ protected:
 
     Router router;
     ResponseSerializer serializer;
+    ServerConfig config;
     HttpResponse getHomeHandler(HttpRequest& request) {
         return {200, "This is home page", {}};
     }
@@ -58,7 +60,7 @@ TEST_F(ClientHandlerTest, HandleGETValid) {
 
     sendRequest(request);
 
-    handleClient(*serverSocket, router, serializer);
+    handleClient(*serverSocket, router, serializer, config);
 
     char buffer[4096];
     ssize_t received = recv(clientSocket, buffer, sizeof(buffer), 0);
@@ -87,7 +89,7 @@ TEST_F(ClientHandlerTest, HandlePOSTValid) {
 
     sendRequest(request);
 
-    handleClient(*serverSocket, router, serializer);
+    handleClient(*serverSocket, router, serializer, config);
 
     char buffer[4096];
     ssize_t received = recv(clientSocket, buffer, sizeof(buffer), 0);
@@ -116,7 +118,7 @@ TEST_F(ClientHandlerTest, HandlePartialBody) {
     sendRequest(request);
 
     std::thread handleThread([&]{
-        handleClient(*serverSocket, router, serializer);
+        handleClient(*serverSocket, router, serializer, config);
     });
 
     char buffer[4096];
@@ -140,7 +142,7 @@ TEST_F(ClientHandlerTest, HandleBodyIsBiggerThanContentLength) {
 
     sendRequest(request);
 
-    handleClient(*serverSocket, router, serializer);
+    handleClient(*serverSocket, router, serializer, config);
 
     char buffer[4096];
     ssize_t receivedBytes = recv(clientSocket, buffer, sizeof(buffer), 0);
@@ -161,7 +163,7 @@ TEST_F(ClientHandlerTest, HandleContentLengthIsBiggerThanLimit) {
 
     sendRequest(request);
 
-    handleClient(*serverSocket, router, serializer);
+    handleClient(*serverSocket, router, serializer, config);
     
     char buffer[4096];
     ssize_t receivedBytes = recv(clientSocket, buffer, sizeof(buffer), 0);
@@ -183,7 +185,7 @@ TEST_F(ClientHandlerTest, HandleUnknownEndpoint) {
 
     sendRequest(request);
 
-    handleClient(*serverSocket, router, serializer);
+    handleClient(*serverSocket, router, serializer, config);
 
     char buffer[4096];
     ssize_t receivedBytes = recv(clientSocket, buffer, sizeof(buffer), 0);
@@ -207,7 +209,7 @@ TEST_F(ClientHandlerTest, HandleUnsupportedMethod) {
 
     sendRequest(request);
 
-    handleClient(*serverSocket, router, serializer);
+    handleClient(*serverSocket, router, serializer, config);
 
     char buffer[4096];
     ssize_t receivedBytes = recv(clientSocket, buffer, sizeof(buffer), 0);
@@ -236,7 +238,7 @@ TEST_F(ClientHandlerTest, HandleClientClosesEarlier) {
     std::streambuf* old_cout = std::cout.rdbuf(cout_buf.rdbuf());
 
     std::thread handleThread([&] {
-        handleClient(*serverSocket, router, serializer);
+        handleClient(*serverSocket, router, serializer, config);
     });
 
     close(clientSocket);
@@ -258,7 +260,7 @@ TEST_F(ClientHandlerTest, HandleReceiveTimeout) {
     const std::string partialRequest{"GET / HTTP/1.1\r\n"};
 
     std::thread handleThread([&] {
-        handleClient(*serverSocket, router, serializer);
+        handleClient(*serverSocket, router, serializer, config);
     });
 
     sendRequest(partialRequest);

@@ -1,18 +1,18 @@
 #include "thread_pool.hpp"
 
+#include "app_interface/server_config.hpp"
 #include "client_handler.hpp"
-#include <iostream>
 #include <cstddef>
+#include <iostream>
 
 
-constexpr size_t MAX_PENDING_CLIENTS = 8;
-
-ThreadPool::ThreadPool(size_t countWorkers,
+ThreadPool::ThreadPool(const ServerConfig& config,
                        Router& router,
                        ResponseSerializer& serializer):
+    config(config),
     router(router),
     serializer(serializer) {
-    for (size_t i = 0; i < countWorkers; ++i) {
+    for (size_t i = 0; i < config.workersCount; ++i) {
         workers.emplace_back(&ThreadPool::worker, this);
     }
 }
@@ -37,7 +37,7 @@ void ThreadPool::enqueue(Socket clientSocket) {
         if (stop) {
             return;
         }
-        if (clients.size() < MAX_PENDING_CLIENTS) {
+        if (clients.size() < config.maxPendingClients) {
             clients.push(std::move(clientSocket));
         }
         else {
@@ -64,6 +64,6 @@ void ThreadPool::worker() {
         clients.pop();
         lock.unlock();
 
-        handleClient(clientSocket, router, serializer);
+        handleClient(clientSocket, router, serializer, config);
     }
 }

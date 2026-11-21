@@ -1,18 +1,19 @@
 #pragma once
 
-#include "routing/router.hpp"
+#include "app_interface/server_config.hpp"
 #include "http/response_serializer.hpp"
 #include "socket.hpp"
-#include <queue>
-#include <vector>
-#include <thread>
-#include <mutex>
+#include "routing/router.hpp"
 #include <condition_variable>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <vector>
 
 
 class ThreadPool {
 public:
-    ThreadPool(size_t countWorkers, Router& router, ResponseSerializer& serializer);
+    ThreadPool(const ServerConfig& config, Router& router, ResponseSerializer& serializer);
     ~ThreadPool();
     void enqueue(Socket client);
 private:
@@ -24,6 +25,7 @@ private:
     std::mutex mutex;
     std::condition_variable condition;
 
+    const ServerConfig& config;
     Router& router;
     ResponseSerializer& serializer;
 };

@@ -1,34 +1,38 @@
 #include "http_server.hpp"
 
+#include "adapters/adapt_handler.hpp"
 #include "app_interface/application_handler.hpp"
+#include "app_interface/server_config.hpp"
+#include "client_handler.hpp"
 #include "http/http_handler.hpp"
-#include <string>
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <cstdio>
-#include <iostream>
-#include <unistd.h>
-#include <vector>
-#include <sstream>
-#include <optional>
-#include <functional>
-#include <thread>
-#include <memory>
-
-#include "routing/router.hpp"
 #include "http/request_parser.hpp"
 #include "http/response_serializer.hpp"
-#include "client_handler.hpp"
-#include "thread_pool.hpp"
+#include "routing/router.hpp"
 #include "socket.hpp"
+#include "thread_pool.hpp"
+
+#include <cstdio>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <netinet/in.h>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <sys/socket.h>
+#include <thread>
+#include <unistd.h>
+#include <vector>
 
 
-HttpServer::HttpServer() : router(std::make_unique<Router>()) {}
+HttpServer::HttpServer(ServerConfig serverConfig)
+    : config(std::move(serverConfig)),
+      flagStop(false),
+      router(std::make_unique<Router>()) {}
 
 HttpServer::~HttpServer() = default;
 
-int HttpServer::run (int port) {
+int HttpServer::run () {
     // For handling POSIX-signals
     // struct sigaction sa{};
     // sa.sa_handler = [&](int signal) {
@@ -63,7 +67,7 @@ int HttpServer::run (int port) {
     // Creating sockaddr and binding it to server socket
     sockaddr_in serverAddress{};
     serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(port);
+    serverAddress.sin_port = htons(config.port);
     serverAddress.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(serverFd, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0) {
@@ -73,7 +77,7 @@ int HttpServer::run (int port) {
         return 1;
     }
 
-    std::cout << "Server socket bound to port " << port << " and all IPv4 interfaces\n";
+    std::cout << "Server socket bound to port " << config.port << " and all IPv4 interfaces\n";
 
     // Set server socket listening
     if (listen(serverFd, 10) < 0) {
@@ -89,7 +93,7 @@ int HttpServer::run (int port) {
     ResponseSerializer serializer = ResponseSerializer();
 
     // ThreadPool for accepting clients' connections
-    ThreadPool threadPool = ThreadPool(4, *router, serializer);
+    ThreadPool threadPool = ThreadPool(config, *router, serializer);
 
     // Handling client's requests
     while(!flagStop) {
@@ -120,23 +124,17 @@ int HttpServer::run (int port) {
 }
 
 void HttpServer::get(
-    std::string endpoint, 
+    const std::string& endpoint, 
     ApplicationHandler appHandler
 ) {
-    
-    // парсинг appHandler приложения в httpHandler
-    // HttpHadnler httpHandler = adapt(appHandler);
-    // router->addRoute("GET", endpoint, httpHandler);
+    router->addRoute("GET", endpoint, adaptHandler(appHandler));
 }
 
 void HttpServer::post(
-    std::string endpoint, 
+    const std::string& endpoint, 
     ApplicationHandler appHandler
 ) {
-
-    // парсинг appHandler приложения в httpHandler
-    // HttpHandler httpHandler = adapt(appHandler);
-    // router->addRoute("POST", endpoint, httpHandler);
+    router->addRoute("POST", endpoint, adaptHandler(appHandler));
 }
 
 void HttpServer::stop() {

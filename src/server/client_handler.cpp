@@ -4,16 +4,13 @@
 #include "http/http_response.hpp"
 #include "http/send_all.hpp"
 #include "http/send_response.hpp"
+#include "app_interface/server_config.hpp"
 #include <iostream>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <chrono>
 
-
-constexpr size_t MAX_HEADER_SIZE = 8192;
-constexpr size_t MAX_BODY_SIZE = 8192;
-constexpr auto REQUEST_RECV_TIMEOUT = std::chrono::seconds(60);
 
 enum class RecvStatus {
     SUCCESS,
@@ -65,7 +62,8 @@ RecvStatus recvData(const Socket& clientSocket,
 
 void handleClient(const Socket& clientSocket,
                   const Router& router, 
-                  const ResponseSerializer& serializer) {
+                  const ResponseSerializer& serializer,
+                  const ServerConfig& config) {
 
     /////////////////////////////////////////
     // Recving data from client and        //
@@ -73,7 +71,7 @@ void handleClient(const Socket& clientSocket,
     /////////////////////////////////////////
 
     // For timeout handling set deadline
-    auto deadline = Clock::now() + REQUEST_RECV_TIMEOUT;
+    auto deadline = Clock::now() + config.headerTimeout;
 
     // For receiving data in buffers and putting them in request
     char buffer[4096];
@@ -101,7 +99,7 @@ void handleClient(const Socket& clientSocket,
             std::cout << "The client " << clientSocket.get() << " has been closed\n";
             return;
         }
-        if (request.size() + receivedBytes > MAX_HEADER_SIZE) {
+        if (request.size() + receivedBytes > config.maxHeaderBytes) {
             std::cerr << "Too long request from client " << clientSocket.get() << "\n";
             return;
         }
@@ -124,7 +122,7 @@ void handleClient(const Socket& clientSocket,
     }
     else {
         // Check parsed request body size
-        if (httpRequest->contentLength > MAX_BODY_SIZE) {
+        if (httpRequest->contentLength > config.maxBodyBytes) {
             std::cerr << "Request entity too much";
             response.statusCode = 413;
             sendResponse(clientSocket, serializer, response);
@@ -157,7 +155,7 @@ void handleClient(const Socket& clientSocket,
                     return;
                 }
                 if (httpRequest->body.size() + receivedBytes > httpRequest->contentLength ||
-                    httpRequest->body.size() + receivedBytes > MAX_BODY_SIZE) {
+                    httpRequest->body.size() + receivedBytes > config.maxBodyBytes) {
                     std::cerr << "Bad http request structure\n";
                     response.statusCode = 400;
                     sendResponse(clientSocket, serializer, response);

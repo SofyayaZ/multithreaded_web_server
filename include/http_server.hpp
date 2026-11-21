@@ -1,25 +1,27 @@
 #pragma once
 
 #include "app_interface/application_handler.hpp"
-#include <string>
+#include "app_interface/server_config.hpp"
+#include <atomic>
 #include <memory>
+#include <string>
 
 
 class Router;
 
 class HttpServer {
+    ServerConfig config;
+    std::atomic<bool> flagStop{false};
     std::unique_ptr<Router> router;
-    int port = 8080;
-    bool flagStop = false;
 public:
-    HttpServer();
+    HttpServer(ServerConfig serverConfig = {});
     ~HttpServer();
 
     // to start server
-    int run(int port);
-    // methods for configuring server 
-    void get(std::string enpoint, ApplicationHandler handler);
-    void post(std::string enpoint, ApplicationHandler handler);
+    int run();
+    // methods for configuring server
+    void get(const std::string& endpoint, ApplicationHandler handler);
+    void post(const std::string& endpoint, ApplicationHandler handler);
     // for stopping server
     void stop();
 };
