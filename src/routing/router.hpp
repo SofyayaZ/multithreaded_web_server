@@ -1,5 +1,6 @@
 #pragma once
 
+#include "http_method.hpp"
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
 #include "route.hpp"
@@ -11,6 +12,6 @@
 class Router {
     std::vector<Route> routes;
 public:
-    void addRoute(std::string method, std::string endpoint, std::function<HttpResponse(const HttpRequest&)> handler);
+    void addRoute(HttpMethod method, std::string endpoint, std::function<HttpResponse(const HttpRequest&)> handler);
     HttpResponse route(const HttpRequest& request) const;
 };

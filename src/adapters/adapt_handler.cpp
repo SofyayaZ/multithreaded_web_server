@@ -8,16 +8,6 @@
 #include <unordered_map>
 
 
-const std::unordered_map<std::string, HttpMethod> methods {
-    {"HEAD",    HttpMethod::HEAD},
-    {"OPTIONS", HttpMethod::OPTIONS},
-    {"GET",     HttpMethod::GET},
-    {"POST",    HttpMethod::POST},
-    {"PATCH",   HttpMethod::PATCH},
-    {"PUT",     HttpMethod::PUT},
-    {"DELETE",  HttpMethod::DELETE}
-};
-
 const std::unordered_map<HttpStatus, unsigned int> statusCodes {
     {HttpStatus::OK,                    200},
     {HttpStatus::Created,               201},
@@ -33,10 +23,7 @@ const std::unordered_map<HttpStatus, unsigned int> statusCodes {
 
 ApplicationRequest toApplicationRequest(const HttpRequest& httpRequest) {
     ApplicationRequest appRequest;
-    auto it = methods.find(httpRequest.httpMethod);
-    if (it != methods.end()) {
-        appRequest.method = it->second;
-    }
+    appRequest.method = httpRequest.httpMethod;
     // appRequest.path = httpRequest.endpoint;
     // appRequest.headers = httpRequest.headers;
     appRequest.body = httpRequest.body;

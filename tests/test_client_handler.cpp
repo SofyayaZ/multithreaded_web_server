@@ -1,4 +1,5 @@
 #include "app_interface/server_config.hpp"
+#include "http_method.hpp"
 #include "http/response_serializer.hpp"
 #include "routing/router.hpp"
 #include "server/client_handler.hpp"
@@ -48,7 +49,7 @@ protected:
 
 
 TEST_F(ClientHandlerTest, HandleGETValid) {
-    router.addRoute("GET", "/", [](const HttpRequest&)->HttpResponse {
+    router.addRoute(HttpMethod::GET, "/", [](const HttpRequest&)->HttpResponse {
         return HttpResponse{200, "Hello", {}};
     });
 
@@ -74,7 +75,7 @@ TEST_F(ClientHandlerTest, HandleGETValid) {
 }
 
 TEST_F(ClientHandlerTest, HandlePOSTValid) {
-    router.addRoute("POST", "/", [](const HttpRequest& request)->HttpResponse {
+    router.addRoute(HttpMethod::POST, "/", [](const HttpRequest& request)->HttpResponse {
         return HttpResponse{200, request.body, {}};
     });
 
@@ -102,7 +103,7 @@ TEST_F(ClientHandlerTest, HandlePOSTValid) {
 }
 
 TEST_F(ClientHandlerTest, HandlePartialBody) {
-    router.addRoute("POST", "/", [](const HttpRequest&)->HttpResponse {
+    router.addRoute(HttpMethod::POST, "/", [](const HttpRequest&)->HttpResponse {
         return HttpResponse{200, "Successfully POSTED", {}};
     });
 
@@ -174,7 +175,7 @@ TEST_F(ClientHandlerTest, HandleContentLengthIsBiggerThanLimit) {
 }
 
 TEST_F(ClientHandlerTest, HandleUnknownEndpoint) {
-    router.addRoute("GET", "/", [](const HttpRequest&)->HttpResponse {
+    router.addRoute(HttpMethod::GET, "/", [](const HttpRequest&)->HttpResponse {
         return HttpResponse{200, "Hello", {}};
     });
     std::string request{
@@ -196,7 +197,7 @@ TEST_F(ClientHandlerTest, HandleUnknownEndpoint) {
 }
 
 TEST_F(ClientHandlerTest, HandleUnsupportedMethod) {
-    router.addRoute("GET", "/", [](const HttpRequest&)->HttpResponse {
+    router.addRoute(HttpMethod::GET, "/", [](const HttpRequest&)->HttpResponse {
         return HttpResponse{200, "Hello", {}};
     });
     std::string request{
@@ -220,7 +221,7 @@ TEST_F(ClientHandlerTest, HandleUnsupportedMethod) {
 }
 
 TEST_F(ClientHandlerTest, HandleClientClosesEarlier) {
-    router.addRoute("GET", "/", [](const HttpRequest&)->HttpResponse {
+    router.addRoute(HttpMethod::GET, "/", [](const HttpRequest&)->HttpResponse {
         return HttpResponse{200, "You will never get this page", {}};
     });
 
@@ -253,7 +254,7 @@ TEST_F(ClientHandlerTest, HandleClientClosesEarlier) {
 }
 
 TEST_F(ClientHandlerTest, HandleReceiveTimeout) {
-    router.addRoute("GET", "/", [](const HttpRequest&)->HttpResponse {
+    router.addRoute(HttpMethod::GET, "/", [](const HttpRequest&)->HttpResponse {
         return HttpResponse{200, "You will never get this page", {}};
     });
 

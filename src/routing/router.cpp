@@ -1,9 +1,14 @@
+#include "http_method.hpp"
 #include "router.hpp"
 
 #include <iostream>
 
 
-void Router::addRoute(std::string method, std::string endpoint, std::function<HttpResponse(const HttpRequest&)> handler) {
+void Router::addRoute(
+    HttpMethod method, 
+    std::string endpoint, 
+    std::function<HttpResponse(const HttpRequest&)> handler) 
+{
     routes.emplace_back(method, endpoint, handler);
 };
 
@@ -21,11 +26,11 @@ HttpResponse Router::route(const HttpRequest& request) const {
             }
             if (firstMethod) {
                 firstMethod = false;
-                allowedMethods.append(route.method);
+                allowedMethods.append(HttpMethod_toString(route.method));
                 continue;
             }
             allowedMethods.append(", ");
-            allowedMethods.append(route.method);
+            allowedMethods.append(HttpMethod_toString(route.method));
         }
     }
     if (validEndpoint) {

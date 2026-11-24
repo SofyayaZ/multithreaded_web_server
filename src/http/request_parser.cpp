@@ -1,3 +1,4 @@
+#include "http_method.hpp"
 #include "request_parser.hpp"
 
 #include <sstream>
@@ -36,12 +37,21 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
     std::getline(requestStream, requestLine);
     std::istringstream stream(requestLine);
     HttpRequest httpRequest{};
-    if (!(stream >> httpRequest.httpMethod
+    std::string strMethod;
+    if (!(stream >> strMethod 
                  >> httpRequest.endpoint
                  >> httpRequest.httpVersion)) {
         std::cerr << "Parsing error\n";
         return std::nullopt;
     }
+
+    auto httpMethod = String_toHttpMethod(strMethod);
+    if (!httpMethod) {
+        std::cerr << "Not active HTTP method in request: " << strMethod << "\n";
+        return std::nullopt;
+    }
+
+    httpRequest.httpMethod = httpMethod.value();
 
     std::string extra;
     if (stream >> extra) {

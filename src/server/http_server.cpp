@@ -5,6 +5,7 @@
 #include "app_interface/server_config.hpp"
 #include "client_handler.hpp"
 #include "http/http_handler.hpp"
+#include "http_method.hpp"
 #include "http/request_parser.hpp"
 #include "http/response_serializer.hpp"
 #include "routing/router.hpp"
@@ -80,7 +81,7 @@ int HttpServer::run () {
     std::cout << "Server socket bound to port " << config.port << " and all IPv4 interfaces\n";
 
     // Set server socket listening
-    if (listen(serverFd, 10) < 0) {
+    if (listen(serverFd, config.listenBacklog) < 0) {
         perror("Listening failed\n");
         close(serverFd);
         std::cout << "Server socket " << serverFd << " has been closed\n";
@@ -123,18 +124,12 @@ int HttpServer::run () {
     return 0;
 }
 
-void HttpServer::get(
+void HttpServer::route(
+    HttpMethod method,
     const std::string& endpoint, 
-    ApplicationHandler appHandler
-) {
-    router->addRoute("GET", endpoint, adaptHandler(appHandler));
-}
-
-void HttpServer::post(
-    const std::string& endpoint, 
-    ApplicationHandler appHandler
-) {
-    router->addRoute("POST", endpoint, adaptHandler(appHandler));
+    ApplicationHandler appHandler) 
+{
+    router->addRoute(method, endpoint, adaptHandler(appHandler));
 }
 
 void HttpServer::stop() {

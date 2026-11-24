@@ -1,5 +1,6 @@
-#include "routing/router.hpp"
+#include "http_method.hpp"
 #include "http/http_response.hpp"
+#include "routing/router.hpp"
 
 #include <gtest/gtest.h>
 
@@ -19,9 +20,9 @@ HttpResponse postHelloHandler(const HttpRequest& request) {
 TEST(RouterTest, GetExistingRouteReturns200) {
     // Added router with GET route for test
     Router router;
-    router.addRoute("GET", "/", homeHandler);
+    router.addRoute(HttpMethod::GET, "/", homeHandler);
     // Correct request and expected response
-    HttpRequest request{"GET", "/", "HTTP/1.1"};
+    HttpRequest request{HttpMethod::GET, "/", "HTTP/1.1"};
     HttpResponse realResponse = router.route(request);
     HttpResponse expectedResponse{200, "Home page", {}};
     // The assertion
@@ -32,10 +33,10 @@ TEST(RouterTest, GetExistingRouteReturns200) {
 
 TEST(RouterTest, PostExistingRouteReturns200) {
     Router router;
-    router.addRoute("GET", "/", homeHandler);
-    router.addRoute("POST", "/", postHelloHandler);
+    router.addRoute(HttpMethod::GET, "/", homeHandler);
+    router.addRoute(HttpMethod::POST, "/", postHelloHandler);
     
-    HttpRequest request{"POST", "/", "HTTP/1.1"};
+    HttpRequest request{HttpMethod::POST, "/", "HTTP/1.1"};
     HttpResponse realResponse = router.route(request);
     HttpResponse expectedResponse{200, "Hello from POST", {}};
     
@@ -46,9 +47,9 @@ TEST(RouterTest, PostExistingRouteReturns200) {
 
 TEST(RouterTest, GetNotFoundEndpointReturns404) {
     Router router;
-    router.addRoute("GET", "/", homeHandler);
+    router.addRoute(HttpMethod::GET, "/", homeHandler);
     
-    HttpRequest request{"GET", "/unknown", "HTTP/1.1"};
+    HttpRequest request{HttpMethod::GET, "/unknown", "HTTP/1.1"};
     HttpResponse realResponse = router.route(request);
     HttpResponse expectedResponse{404, "Not Found", {}};
 
@@ -59,11 +60,11 @@ TEST(RouterTest, GetNotFoundEndpointReturns404) {
 
 TEST(RouterTest, DeleteExistingRouteReturns405) {
     Router router;
-    router.addRoute("GET", "/", homeHandler);
-    router.addRoute("GET", "/hello", helloHandler);
-    router.addRoute("POST", "/hello", postHelloHandler);
+    router.addRoute(HttpMethod::GET, "/", homeHandler);
+    router.addRoute(HttpMethod::GET, "/hello", helloHandler);
+    router.addRoute(HttpMethod::POST, "/hello", postHelloHandler);
 
-    HttpRequest request{"DELETE", "/hello", "HTTP/1.1"};
+    HttpRequest request{HttpMethod::DELETE, "/hello", "HTTP/1.1"};
     HttpResponse realResponse = router.route(request);
     HttpResponse expectedResponse{405, "Method Not Allowed\nAllowed Methods: GET, POST\n", {{"Allow", "GET, POST"}}};
 

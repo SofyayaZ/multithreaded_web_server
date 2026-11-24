@@ -1,11 +1,12 @@
 #pragma once
 
+#include "http_method.hpp"
 #include <string>
 #include <unordered_map>
 
 
 struct HttpRequest {
-    std::string httpMethod;
+    HttpMethod httpMethod;
     std::string endpoint;
     std::string httpVersion;
 
@@ -14,8 +15,8 @@ struct HttpRequest {
     std::string body;
     unsigned int contentLength = 0;
 
-    HttpRequest () {}
-    HttpRequest (std::string httpMethod, std::string endpoint, std::string httpVersion) {
+    HttpRequest() {}
+    HttpRequest(HttpMethod httpMethod, std::string endpoint, std::string httpVersion) {
         this->httpMethod = httpMethod;
         this->endpoint = endpoint;
         this->httpVersion = httpVersion;

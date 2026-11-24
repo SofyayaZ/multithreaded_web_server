@@ -1,6 +1,7 @@
-#include "http/request_parser.hpp"
+#include "http_method.hpp"
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
+#include "http/request_parser.hpp"
 
 #include <gtest/gtest.h>
 #include <iostream>
@@ -13,7 +14,7 @@ TEST(RequestParserTest, ParseValidGet) {
     request += "User-Agent: Mozilla/5.0\r\n";
     request += "Accept: text/html\r\n\r\n";
     auto realParsedRequest = parseRequest(request);
-    HttpRequest expectedParsedRequest{"GET", "/", "HTTP/1.1"};
+    HttpRequest expectedParsedRequest{HttpMethod::GET, "/", "HTTP/1.1"};
     expectedParsedRequest.headers = {{"host", ":/example.com"}, 
                                      {"user-agent", "Mozilla/5.0"},
                                      {"accept", "text/html"}};
@@ -33,7 +34,7 @@ TEST(RequestParserTest, ParseDifferentCaseHeaders) {
     request += "USER-Agent: Mozilla/5.0\r\n";
     request += "ACCEPT: text/html\r\n\r\n";
     auto realParsedRequest = parseRequest(request);
-    HttpRequest expectedParsedRequest{"GET", "/", "HTTP/1.1"};
+    HttpRequest expectedParsedRequest{HttpMethod::GET, "/", "HTTP/1.1"};
     expectedParsedRequest.headers = {{"host", ":/example.com"}, 
                                      {"user-agent", "Mozilla/5.0"},
                                      {"accept", "text/html"}};
@@ -56,7 +57,7 @@ TEST(RequestParserTest, ParseValidPost) {
     request += "\r\n";
     request += "Body to POST";
     auto realParsedRequest = parseRequest(request);
-    HttpRequest expectedParsedRequest{"POST", "/", "HTTP/1.1"};
+    HttpRequest expectedParsedRequest{HttpMethod::POST, "/", "HTTP/1.1"};
     expectedParsedRequest.headers = {{"host", "localhost"}, 
                                      {"user-agent", "Chrome/16.0"},
                                      {"accept", "text/plain"},
@@ -82,7 +83,7 @@ TEST(RequestParserTest, ParsePartialBody) {
     request += "\r\n";
     request += "Body to";
     auto realParsedRequest = parseRequest(request);
-    HttpRequest expectedParsedRequest{"POST", "/", "HTTP/1.1"};
+    HttpRequest expectedParsedRequest{HttpMethod::POST, "/", "HTTP/1.1"};
     expectedParsedRequest.headers = {{"host", "localhost"}, 
                                      {"user-agent", "Chrome/16.0"},
                                      {"accept", "text/plain"},
@@ -107,7 +108,7 @@ TEST(RequestParserTest, ParseZeroContentLength) {
     request += "Content-Length: 0\r\n";
     request += "\r\n";
     auto realParsedRequest = parseRequest(request);
-    HttpRequest expectedParsedRequest{"POST", "/", "HTTP/1.1"};
+    HttpRequest expectedParsedRequest{HttpMethod::POST, "/", "HTTP/1.1"};
     expectedParsedRequest.headers = {{"host", "localhost"}, 
                                      {"user-agent", "Chrome/16.0"},
                                      {"accept", "text/plain"},
@@ -227,7 +228,7 @@ TEST (RequestParserTest, ParseHeaderWithValidSpecialSymbols) {
     request += "Content-Leng_9012th#1*: 0\r\n";
     request += "\r\n";
     auto realParsedRequest = parseRequest(request);
-    HttpRequest expectedParsedRequest = HttpRequest("GET", "/", "HTTP/1.1");
+    HttpRequest expectedParsedRequest = HttpRequest(HttpMethod::GET, "/", "HTTP/1.1");
     expectedParsedRequest.headers = {{"host", ":/example.com"},
                                      {"user-agent%", "Mozilla/5.0"},
                                      {"content-leng_9012th#1*", "0"}};
