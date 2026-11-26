@@ -2,7 +2,6 @@
 
 #include "http/request_parser.hpp"
 #include "http/http_response.hpp"
-#include "http/send_all.hpp"
 #include "http/send_response.hpp"
 #include "app_interface/server_config.hpp"
 #include <iostream>

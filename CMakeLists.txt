@@ -16,7 +16,6 @@ add_library(http_server_lib STATIC
 
             src/http/request_parser.cpp 
             src/http/response_serializer.cpp 
-            src/http/send_all.cpp 
             src/http/send_response.cpp 
 
             src/routing/router.cpp 
