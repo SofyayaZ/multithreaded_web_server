@@ -15,9 +15,9 @@ TEST(RequestParserTest, ParseValidGet) {
     request += "Accept: text/html\r\n\r\n";
     auto realParsedRequest = parseRequest(request);
     HttpRequest expectedParsedRequest{HttpMethod::GET, "/", "HTTP/1.1"};
-    expectedParsedRequest.headers = {{"host", ":/example.com"}, 
-                                     {"user-agent", "Mozilla/5.0"},
-                                     {"accept", "text/html"}};
+    expectedParsedRequest.headers.set("host", ":/example.com");
+    expectedParsedRequest.headers.set("user-agent", "Mozilla/5.0");
+    expectedParsedRequest.headers.set("accept", "text/html");
     ASSERT_TRUE(realParsedRequest.has_value());
     EXPECT_EQ(realParsedRequest->httpMethod, expectedParsedRequest.httpMethod);
     EXPECT_EQ(realParsedRequest->endpoint, expectedParsedRequest.endpoint);
@@ -35,9 +35,9 @@ TEST(RequestParserTest, ParseDifferentCaseHeaders) {
     request += "ACCEPT: text/html\r\n\r\n";
     auto realParsedRequest = parseRequest(request);
     HttpRequest expectedParsedRequest{HttpMethod::GET, "/", "HTTP/1.1"};
-    expectedParsedRequest.headers = {{"host", ":/example.com"}, 
-                                     {"user-agent", "Mozilla/5.0"},
-                                     {"accept", "text/html"}};
+    expectedParsedRequest.headers.set("host", ":/example.com");
+    expectedParsedRequest.headers.set("user-agent", "Mozilla/5.0");
+    expectedParsedRequest.headers.set("accept", "text/html");
     ASSERT_TRUE(realParsedRequest.has_value());
     EXPECT_EQ(realParsedRequest->httpMethod, expectedParsedRequest.httpMethod);
     EXPECT_EQ(realParsedRequest->endpoint, expectedParsedRequest.endpoint);
@@ -58,10 +58,10 @@ TEST(RequestParserTest, ParseValidPost) {
     request += "Body to POST";
     auto realParsedRequest = parseRequest(request);
     HttpRequest expectedParsedRequest{HttpMethod::POST, "/", "HTTP/1.1"};
-    expectedParsedRequest.headers = {{"host", "localhost"}, 
-                                     {"user-agent", "Chrome/16.0"},
-                                     {"accept", "text/plain"},
-                                     {"content-length", "12"}};
+    expectedParsedRequest.headers.set("host", "localhost");
+    expectedParsedRequest.headers.set("user-agent", "Chrome/16.0");
+    expectedParsedRequest.headers.set("accept", "text/plain");
+    expectedParsedRequest.headers.set("content-length", "12");
     expectedParsedRequest.contentLength = 12;
     expectedParsedRequest.body = "Body to POST";
     ASSERT_TRUE(realParsedRequest.has_value());
@@ -84,10 +84,10 @@ TEST(RequestParserTest, ParsePartialBody) {
     request += "Body to";
     auto realParsedRequest = parseRequest(request);
     HttpRequest expectedParsedRequest{HttpMethod::POST, "/", "HTTP/1.1"};
-    expectedParsedRequest.headers = {{"host", "localhost"}, 
-                                     {"user-agent", "Chrome/16.0"},
-                                     {"accept", "text/plain"},
-                                     {"content-length", "12"}};
+    expectedParsedRequest.headers.set("host", "localhost");
+    expectedParsedRequest.headers.set("user-agent", "Chrome/16.0");
+    expectedParsedRequest.headers.set("accept", "text/plain");
+    expectedParsedRequest.headers.set("content-length", "12");
     expectedParsedRequest.contentLength = 12;
     expectedParsedRequest.body = "Body to";
     ASSERT_TRUE(realParsedRequest.has_value());
@@ -109,10 +109,10 @@ TEST(RequestParserTest, ParseZeroContentLength) {
     request += "\r\n";
     auto realParsedRequest = parseRequest(request);
     HttpRequest expectedParsedRequest{HttpMethod::POST, "/", "HTTP/1.1"};
-    expectedParsedRequest.headers = {{"host", "localhost"}, 
-                                     {"user-agent", "Chrome/16.0"},
-                                     {"accept", "text/plain"},
-                                     {"content-length", "0"}};
+    expectedParsedRequest.headers.set("host", "localhost");
+    expectedParsedRequest.headers.set("user-agent", "Chrome/16.0");
+    expectedParsedRequest.headers.set("accept", "text/plain");
+    expectedParsedRequest.headers.set("content-length", "0");
     ASSERT_TRUE(realParsedRequest.has_value());
     EXPECT_EQ(realParsedRequest->httpMethod, expectedParsedRequest.httpMethod);
     EXPECT_EQ(realParsedRequest->endpoint, expectedParsedRequest.endpoint);
@@ -171,7 +171,7 @@ TEST (RequestParserTest, ParseNoColonInHeader) {
     std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
     auto realParsedRequest = parseRequest(request);
     std::cerr.rdbuf(old_cerr);
-    EXPECT_EQ(buffer.str(), "Header without a colon is invalid\n");
+    EXPECT_EQ(buffer.str(), "Header string without a colon is invalid\n");
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
@@ -229,9 +229,9 @@ TEST (RequestParserTest, ParseHeaderWithValidSpecialSymbols) {
     request += "\r\n";
     auto realParsedRequest = parseRequest(request);
     HttpRequest expectedParsedRequest = HttpRequest(HttpMethod::GET, "/", "HTTP/1.1");
-    expectedParsedRequest.headers = {{"host", ":/example.com"},
-                                     {"user-agent%", "Mozilla/5.0"},
-                                     {"content-leng_9012th#1*", "0"}};
+    expectedParsedRequest.headers.set("host", ":/example.com");
+    expectedParsedRequest.headers.set("user-agent%", "Mozilla/5.0");
+    expectedParsedRequest.headers.set("content-leng_9012th#1*", "0");
     ASSERT_TRUE(realParsedRequest.has_value());
     EXPECT_EQ(realParsedRequest->headers, expectedParsedRequest.headers);
 }
@@ -240,15 +240,15 @@ TEST (RequestParserTest, ParseEmptyHeaderContent) {
     std::string request{};
     request += "GET / HTTP/1.1\r\n";
     request += "Host: :/example.com\r\n";
-    request += "User-Agent: \r\n";
+    request += "User-Agent: Chrome/167.0\r\n";
     request += "Content-Length: 0\r\n";
+    request += "EmptyH:\r\n";
     request += "\r\n";
-    std::stringstream buffer;
-    std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
-    auto realParsedRequest = parseRequest(request);
-    std::cerr.rdbuf(old_cerr);
-    EXPECT_EQ(buffer.str(), "Empty header content\n");
-    EXPECT_EQ(realParsedRequest, std::nullopt);
+    auto parsedRequest = parseRequest(request);
+    ASSERT_TRUE(parsedRequest.has_value());
+    auto value = parsedRequest->headers.get("emptyh");
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(*value, "");
 }
 
 TEST (RequestParserTest, ParseEndOfHeadersNotFound) {
@@ -279,7 +279,7 @@ TEST(RequestParserTest, ParseDoubleContentLength) {
     std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
     auto realParsedRequest = parseRequest(request);
     std::cerr.rdbuf(old_cerr);
-    EXPECT_EQ(buffer.str(), "Duplicated Content-Length header is invalid\n");
+    EXPECT_EQ(buffer.str(), "Duplicated Host / User-Agent / Content-Length is invalid\n");
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
@@ -297,7 +297,7 @@ TEST(RequestParserTest, ParseDoubleHost) {
     std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
     auto realParsedRequest = parseRequest(request);
     std::cerr.rdbuf(old_cerr);
-    EXPECT_EQ(buffer.str(), "Duplicated Host header is invalid\n");
+    EXPECT_EQ(buffer.str(), "Duplicated Host / User-Agent / Content-Length is invalid\n");
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 
@@ -315,7 +315,7 @@ TEST(RequestParserTest, ParseDoubleUserAgent) {
     std::streambuf* old_cerr = std::cerr.rdbuf(buffer.rdbuf());
     auto realParsedRequest = parseRequest(request);
     std::cerr.rdbuf(old_cerr);
-    EXPECT_EQ(buffer.str(), "Duplicated User-Agent header is invalid\n");
+    EXPECT_EQ(buffer.str(), "Duplicated Host / User-Agent / Content-Length is invalid\n");
     EXPECT_EQ(realParsedRequest, std::nullopt);
 }
 

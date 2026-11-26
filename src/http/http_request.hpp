@@ -1,8 +1,8 @@
 #pragma once
 
+#include "app_interface/headers.hpp"
 #include "http_method.hpp"
 #include <string>
-#include <unordered_map>
 
 
 struct HttpRequest {
@@ -10,15 +10,12 @@ struct HttpRequest {
     std::string endpoint;
     std::string httpVersion;
 
-    std::unordered_map<std::string, std::string> headers;
+    Headers headers;
 
     std::string body;
     unsigned int contentLength = 0;
 
     HttpRequest() {}
-    HttpRequest(HttpMethod httpMethod, std::string endpoint, std::string httpVersion) {
-        this->httpMethod = httpMethod;
-        this->endpoint = endpoint;
-        this->httpVersion = httpVersion;
-    }
+    HttpRequest(HttpMethod httpMethod, std::string endpoint, std::string httpVersion):
+                httpMethod(httpMethod), endpoint(endpoint), httpVersion(httpVersion) {}
 };

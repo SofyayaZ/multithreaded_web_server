@@ -1,3 +1,4 @@
+#include "app_interface/headers.hpp"
 #include "http_method.hpp"
 #include "http/http_response.hpp"
 #include "routing/router.hpp"
@@ -66,7 +67,11 @@ TEST(RouterTest, DeleteExistingRouteReturns405) {
 
     HttpRequest request{HttpMethod::DELETE, "/hello", "HTTP/1.1"};
     HttpResponse realResponse = router.route(request);
-    HttpResponse expectedResponse{405, "Method Not Allowed\nAllowed Methods: GET, POST\n", {{"Allow", "GET, POST"}}};
+
+    std::string expectedString{"Method Not Allowed\nAllowed Methods: GET, POST\n"};
+    Headers expectedHeaders;
+    expectedHeaders.set("Allow", "GET, POST");
+    HttpResponse expectedResponse{405, expectedString, expectedHeaders};
 
     EXPECT_EQ(realResponse.statusCode, expectedResponse.statusCode);
     EXPECT_EQ(realResponse.body, expectedResponse.body);

@@ -24,8 +24,8 @@ const std::unordered_map<HttpStatus, unsigned int> statusCodes {
 ApplicationRequest toApplicationRequest(const HttpRequest& httpRequest) {
     ApplicationRequest appRequest;
     appRequest.method = httpRequest.httpMethod;
-    // appRequest.path = httpRequest.endpoint;
-    // appRequest.headers = httpRequest.headers;
+    appRequest.path = httpRequest.endpoint;
+    appRequest.headers = httpRequest.headers;
     appRequest.body = httpRequest.body;
     return appRequest;
 }
@@ -36,7 +36,7 @@ HttpResponse toHttpResponse(const ApplicationResponse& appResponse) {
     if (it != statusCodes.end()) {
         httpResponse.statusCode = it->second;
     }
-    // httpResponse.headers = appResponse.headers;
+    httpResponse.headers = appResponse.headers;
     httpResponse.body = appResponse.body;
     return httpResponse;
 }

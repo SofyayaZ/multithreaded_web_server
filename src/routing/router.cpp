@@ -35,7 +35,7 @@ HttpResponse Router::route(const HttpRequest& request) const {
     }
     if (validEndpoint) {
         response.statusCode = 405;
-        response.headers["Allow"] = allowedMethods;
+        response.headers.set("Allow", allowedMethods);
         response.body = "Method Not Allowed\n";
         response.body += "Allowed Methods: " + allowedMethods + "\n";
     } else {

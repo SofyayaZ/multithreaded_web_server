@@ -1,19 +1,17 @@
 #pragma once
 
+#include "app_interface/headers.hpp"
 #include <string>
-#include <unordered_map>
 
 
 struct HttpResponse {
     unsigned int statusCode;
     std::string body;
-    std::unordered_map<std::string, std::string> headers;
+    Headers headers;
 
     HttpResponse() {}
-    HttpResponse(unsigned int statusCode,
-                 std::string body,
-                 std::unordered_map<std::string, std::string> headers):
+    HttpResponse(unsigned int statusCode, std::string body, Headers headers):
         statusCode(statusCode),
-        body(body),
-        headers(headers) {}
+        body(std::move(body)),
+        headers(std::move(headers)) {}
 };

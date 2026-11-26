@@ -1,12 +1,24 @@
+#include "app_interface/headers.hpp"
 #include "http_method.hpp"
 #include "request_parser.hpp"
 
-#include <sstream>
-#include <iostream>
 #include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <string_view>
 
 
-bool isValidHeader(const std::string& header) {
+constexpr std::string_view trimOWS(std::string_view s) noexcept {
+    while (!s.empty() && (s.front() == ' ' || s.front() == '\t')) {
+        s.remove_prefix(1);
+    }
+    while (!s.empty() && (s.back() == ' ' || s.back() == '\t')) {
+        s.remove_suffix(1);
+    }
+    return s;
+}
+
+bool isValidHeader(std::string_view header) noexcept {
     return std::all_of(header.begin(), header.end(), [](unsigned char c)->bool {
         return ((c >= 'a') && (c <='z'))  ||
                ((c >= 'A') && (c <= 'Z')) ||
@@ -27,6 +39,15 @@ bool isValidHeader(const std::string& header) {
                (c == '|') ||
                (c == '~') ;
     });
+}
+
+bool isValidHeaderValue(std::string_view value) noexcept {
+    for (unsigned char c : value) {
+        if (c == '\r' || c == '\n' || c == '\0') return false;  // forbidden chars for header value
+        if (c < 0x20 && c != '\t')               return false;  // CTRL-combinations (^C, ^H, etc.)
+        if (c == 0x7F)                           return false;  // DEL
+    }
+    return true;
 }
 
 std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
@@ -65,10 +86,7 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
         return std::nullopt;
     }
 
-    // Getting the headers
-    bool hasContentLength = false;
-    bool hasHost = false;
-    bool hasUserAgent = false;
+    // Extracting the headers
     bool endOfHeaders = false;
     while (std::getline(requestStream, requestLine, '\n')) {
         // Check the string beetwen headers and body
@@ -77,23 +95,24 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
             break;
         }
 
-        if (requestLine.find('\r') == std::string::npos) {
+        // Take a view of a request line
+        std::string_view line{requestLine};
+        if (line.empty() || line.back() != '\r') {
             std::cerr << "Invalid CRLF\n";
             return std::nullopt;
         }
+        line.remove_suffix(1); // remove '\r' at the end of line
 
-        std::string header;
-        std::string headerContent;
-
-        // Finding colon beetwen header and its content
-        auto colon = requestLine.find(':');
-        if (colon == std::string::npos) {
-            std::cerr << "Header without a colon is invalid\n";
+        // Looking for colon beetwen header and its content
+        auto colon = line.find(':');
+        if (colon == std::string_view::npos) {
+            std::cerr << "Header string without a colon is invalid\n";
             return std::nullopt;
         }
 
-        // Getting header and its content
-        header = requestLine.substr(0, colon);
+        // Getting Header and its Content
+        std::string_view header = line.substr(0, colon);
+        std::string_view headerContent = trimOWS(line.substr(colon + 1));
 
         // Check if header is empty
         if (header.empty()) {
@@ -107,56 +126,20 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
             return std::nullopt;
         }
 
-        // Normalizing header
-        for (auto& c : header) {
-            c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
-        }
-        // Check double Content-Length header
-        if (header == "content-length") {
-            if (hasContentLength) {
-                std::cerr << "Duplicated Content-Length header is invalid\n";
-                return std::nullopt;
-            }
-            hasContentLength = true;
-        }
-
-        // Check double Host header
-        if (header == "host") {
-            if (hasHost) {
-                std::cerr << "Duplicated Host header is invalid\n";
-                return std::nullopt;
-            }
-            hasHost = true;
-        }
-
-        // Check double User-Agent header
-        if (header == "user-agent") {
-            if (hasUserAgent) {
-                std::cerr << "Duplicated User-Agent header is invalid\n";
-                return std::nullopt;
-            }
-            hasUserAgent = true;
-        }
-
-        // Extracting header content
-        headerContent = requestLine.substr(colon + 1);
-
-        // Deleting '\r' from header content
-        if (!headerContent.empty() && headerContent.back() == '\r') {
-            headerContent.pop_back();
-        }
-        // Deleting ' ' from header content, check if it's empty
-        auto first = headerContent.find_first_not_of(' ');
-        if (first == std::string::npos) {
-            std::cerr << "Empty header content\n";
+        if (!isValidHeaderValue(headerContent)) {
+            std::cerr << "Invalid header content format\n";
             return std::nullopt;
         }
 
-        if (first != 0) {
-            headerContent.erase(0, first);
-        }
+        httpRequest.headers.add(std::string(header), std::string(headerContent));
+    }
 
-        httpRequest.headers[header] = headerContent;
+    // Check double headers for Host, User-Agent, Content-Length
+    if (httpRequest.headers.getAll("Host").size() > 1 ||
+        httpRequest.headers.getAll("User-Agent").size() > 1 ||
+        httpRequest.headers.getAll("Content-Length").size() > 1) {
+        std::cerr << "Duplicated Host / User-Agent / Content-Length is invalid\n";
+        return std::nullopt;
     }
 
     if (!endOfHeaders) {
@@ -164,42 +147,40 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
         return std::nullopt;
     }
 
-    // Iterator for checking headers
-    std::unordered_map<std::string, std::string>::iterator it{};
-
-    // Check no "Transfer-Encoding"
-    it = httpRequest.headers.find("transfer-encoding");
-    if (it != httpRequest.headers.end()) {
+    // Check no "Transfer-Encoding" - for now
+    if (httpRequest.headers.contains("transfer-encoding")) {
         std::cerr << "Transfer-Encoding => ban\n";
         return std::nullopt;
     }
 
-    // Find Host
-    it = httpRequest.headers.find("host");
-    if (it == httpRequest.headers.end()) {
+    // Host is a necessary header
+    if (!httpRequest.headers.contains("host")) {
         std::cerr << "Host header is invalid header format\n";
         return std::nullopt;
     }
 
-    // Check host os not empty
-    if (it->second == "") {
+    // Check host not empty
+    if (httpRequest.headers.get("host") == "") {
         std::cerr << "Host cannot be empty\n";
         return std::nullopt;
     }
 
     // Getting the content length
-    it = httpRequest.headers.find("content-length");
-    if (it != httpRequest.headers.end()) {
-        const std::string& contentLengthValue = it->second;
+    if (httpRequest.headers.contains("content-length")) {
+        auto contentLengthValue = httpRequest.headers.get("content-length");
+        if (!contentLengthValue) {
+            std::cerr << "No Content-Length value found\n";
+            return std::nullopt;
+        }
         
-        for (unsigned char c : contentLengthValue) {
+        for (unsigned char c : *contentLengthValue) {
             if (!std::isdigit(c)) {
                 std::cerr << "Invalid Content-Length value\n";
                 return std::nullopt;
             }
         }
 
-        std::istringstream contentLengthStream(contentLengthValue);
+        std::istringstream contentLengthStream(*contentLengthValue);
         if (!(contentLengthStream >> httpRequest.contentLength)) {
             std::cerr << "Getting Content-Length from stream failed\n";
             return std::nullopt;
@@ -215,7 +196,7 @@ std::optional<HttpRequest> parseRequest(const std::string& stringRequest) {
     
     httpRequest.body = stringRequest.substr(bodyPosition + 4);
 
-    if (it == httpRequest.headers.end() && !httpRequest.body.empty()) {
+    if (!httpRequest.headers.contains("content-length") && !httpRequest.body.empty()) {
         std::cerr << "Need Content-Length\n";
         return std::nullopt;
     }

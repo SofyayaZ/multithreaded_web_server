@@ -11,8 +11,11 @@ std::string ResponseSerializer::serializeResponse(const HttpResponse& response) 
     serializedReponse += std::to_string(response.body.size()) + "\r\n";
     serializedReponse += "Content-type: text/plain\r\n";
     serializedReponse += "Connection: close\r\n";
-    for (const auto& [header, headerContent] : response.headers) {
-        serializedReponse += header + ": " + headerContent + "\r\n";
+    for (const auto& h : response.headers.entries()) {
+        serializedReponse += h.name;
+        serializedReponse += ": ";
+        serializedReponse += h.value;
+        serializedReponse += "\r\n";
     }
     serializedReponse += "\r\n";
     serializedReponse += response.body;
