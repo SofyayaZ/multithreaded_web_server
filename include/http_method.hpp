@@ -14,7 +14,7 @@ enum class HttpMethod {
     DELETE
 };
 
-constexpr std::string_view HttpMethod_toString(HttpMethod method) {
+constexpr std::string_view HttpMethod_toString(HttpMethod method) noexcept {
     switch (method) {
         case HttpMethod::GET:       return "GET";
         case HttpMethod::HEAD:      return "HEAD";
@@ -27,7 +27,7 @@ constexpr std::string_view HttpMethod_toString(HttpMethod method) {
     return {};
 }
 
-constexpr std::optional<HttpMethod> String_toHttpMethod(std::string_view strMethod) {
+constexpr std::optional<HttpMethod> String_toHttpMethod(std::string_view strMethod) noexcept {
     if (strMethod == "GET")         return HttpMethod::GET;
     if (strMethod == "HEAD")        return HttpMethod::HEAD;
     if (strMethod == "OPTIONS")     return HttpMethod::OPTIONS;
