@@ -1,5 +1,6 @@
 #include "client_handler.hpp"
 
+#include "http_status.hpp"
 #include "http/request_parser.hpp"
 #include "http/http_response.hpp"
 #include "http/send_response.hpp"
@@ -90,7 +91,7 @@ void handleClient(const Socket& clientSocket,
         }
         if (receivedData == RecvStatus::TIMEOUT) {
             std::cerr << "Request timeout\n";
-            response.statusCode = 408;
+            response.statusCode = HttpStatus::RequestTimeout;
             sendResponse(clientSocket, serializer, response);
             return;
         }
@@ -115,21 +116,21 @@ void handleClient(const Socket& clientSocket,
     auto httpRequest = parseRequest(request);
     if (!httpRequest) {
         std::cerr << "Bad http request structure\n";
-        response.statusCode = 400;
+        response.statusCode = HttpStatus::BadRequest;
         sendResponse(clientSocket, serializer, response);
         return;
     }
     else {
         // Check parsed request body size
         if (httpRequest->contentLength > config.maxBodyBytes) {
-            std::cerr << "Request entity too much";
-            response.statusCode = 413;
+            std::cerr << "Content too large";
+            response.statusCode = HttpStatus::ContentTooLarge;
             sendResponse(clientSocket, serializer, response);
             return;
         }
         else if (httpRequest->body.size() > httpRequest->contentLength) {
             std::cerr << "Bad http request structure\n";
-            response.statusCode = 400;
+            response.statusCode = HttpStatus::BadRequest;
             sendResponse(clientSocket, serializer, response);
             return;
         }
@@ -145,7 +146,7 @@ void handleClient(const Socket& clientSocket,
                 }
                 if (receivedData == RecvStatus::TIMEOUT) {
                     std::cerr << "Request timeout\n";
-                    response.statusCode = 408;
+                    response.statusCode = HttpStatus::RequestTimeout;
                     sendResponse(clientSocket, serializer, response);
                     return;
                 }
@@ -156,7 +157,7 @@ void handleClient(const Socket& clientSocket,
                 if (httpRequest->body.size() + receivedBytes > httpRequest->contentLength ||
                     httpRequest->body.size() + receivedBytes > config.maxBodyBytes) {
                     std::cerr << "Bad http request structure\n";
-                    response.statusCode = 400;
+                    response.statusCode = HttpStatus::BadRequest;
                     sendResponse(clientSocket, serializer, response);
                     return;
                 }

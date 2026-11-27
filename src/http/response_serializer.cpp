@@ -1,12 +1,14 @@
+#include "http_status.hpp"
 #include "response_serializer.hpp"
 
 
 std::string ResponseSerializer::serializeResponse(const HttpResponse& response) const {
     std::string serializedReponse = "";
     serializedReponse += "HTTP/1.1 ";
-    serializedReponse += std::to_string(response.statusCode);
+    serializedReponse += std::to_string(codeFromStatus(response.statusCode));
     serializedReponse += " ";
-    serializedReponse += reasoningText.at(response.statusCode) + "\r\n";
+    serializedReponse += reasonPhrase(response.statusCode);
+    serializedReponse += "\r\n";
     serializedReponse += "Content-Length: ";
     serializedReponse += std::to_string(response.body.size()) + "\r\n";
     serializedReponse += "Content-type: text/plain\r\n";

@@ -1,4 +1,5 @@
 #include "http_method.hpp"
+#include "http_status.hpp"
 #include "router.hpp"
 
 #include <iostream>
@@ -34,12 +35,12 @@ HttpResponse Router::route(const HttpRequest& request) const {
         }
     }
     if (validEndpoint) {
-        response.statusCode = 405;
+        response.statusCode = HttpStatus::MethodNotAllowed;
         response.headers.set("Allow", allowedMethods);
         response.body = "Method Not Allowed\n";
         response.body += "Allowed Methods: " + allowedMethods + "\n";
     } else {
-        response.statusCode = 404;
+        response.statusCode = HttpStatus::NotFound;
         response.body = "Not Found";
     }
     

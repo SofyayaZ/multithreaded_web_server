@@ -4,22 +4,10 @@
 #include "app_interface/application_request.hpp"
 #include "http/http_handler.hpp"
 #include "http/http_response.hpp"
+#include "http_status.hpp"
 #include <string>
 #include <unordered_map>
 
-
-const std::unordered_map<HttpStatus, unsigned int> statusCodes {
-    {HttpStatus::OK,                    200},
-    {HttpStatus::Created,               201},
-    {HttpStatus::NoContent,             204},
-    {HttpStatus::BadRequest,            400},
-    {HttpStatus::Unauthorized,          401},
-    {HttpStatus::NotFound,              404},
-    {HttpStatus::MethodNotAllowed,      405},
-    {HttpStatus::RequestTimeout,        408},
-    {HttpStatus::RequestEntityTooLarge, 413},
-    {HttpStatus::InternalServerError,   500},
-};
 
 ApplicationRequest toApplicationRequest(const HttpRequest& httpRequest) {
     ApplicationRequest appRequest;
@@ -32,10 +20,7 @@ ApplicationRequest toApplicationRequest(const HttpRequest& httpRequest) {
 
 HttpResponse toHttpResponse(const ApplicationResponse& appResponse) {
     HttpResponse httpResponse;
-    auto it = statusCodes.find(appResponse.status);
-    if (it != statusCodes.end()) {
-        httpResponse.statusCode = it->second;
-    }
+    httpResponse.statusCode = appResponse.status;
     httpResponse.headers = appResponse.headers;
     httpResponse.body = appResponse.body;
     return httpResponse;
