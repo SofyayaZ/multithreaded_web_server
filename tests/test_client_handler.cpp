@@ -1,5 +1,6 @@
 #include "app_interface/server_config.hpp"
 #include "http_method.hpp"
+#include "http_status.hpp"
 #include "http/response_serializer.hpp"
 #include "routing/router.hpp"
 #include "server/client_handler.hpp"
@@ -20,7 +21,7 @@ protected:
     ResponseSerializer serializer;
     ServerConfig config;
     HttpResponse getHomeHandler(HttpRequest& request) {
-        return {200, "This is home page", {}};
+        return {HttpStatus::OK, "This is home page", {}};
     }
 
     void sendRequest(const std::string& request) {
@@ -50,7 +51,7 @@ protected:
 
 TEST_F(ClientHandlerTest, HandleGETValid) {
     router.addRoute(HttpMethod::GET, "/", [](const HttpRequest&)->HttpResponse {
-        return HttpResponse{200, "Hello", {}};
+        return HttpResponse{HttpStatus::OK, "Hello", {}};
     });
 
     const std::string request{
@@ -76,7 +77,7 @@ TEST_F(ClientHandlerTest, HandleGETValid) {
 
 TEST_F(ClientHandlerTest, HandlePOSTValid) {
     router.addRoute(HttpMethod::POST, "/", [](const HttpRequest& request)->HttpResponse {
-        return HttpResponse{200, request.body, {}};
+        return HttpResponse{HttpStatus::OK, request.body, {}};
     });
 
     const std::string request{
@@ -104,7 +105,7 @@ TEST_F(ClientHandlerTest, HandlePOSTValid) {
 
 TEST_F(ClientHandlerTest, HandlePartialBody) {
     router.addRoute(HttpMethod::POST, "/", [](const HttpRequest&)->HttpResponse {
-        return HttpResponse{200, "Successfully POSTED", {}};
+        return HttpResponse{HttpStatus::OK, "Successfully POSTED", {}};
     });
 
     const std::string body(5000, 'z');
@@ -150,7 +151,7 @@ TEST_F(ClientHandlerTest, HandleBodyIsBiggerThanContentLength) {
     std::string response(buffer, receivedBytes);
 
     EXPECT_NE(response.find("400"), std::string::npos);
-    EXPECT_NE(response.find("Bad request"), std::string::npos);
+    EXPECT_NE(response.find("Bad Request"), std::string::npos);
 }
 
 TEST_F(ClientHandlerTest, HandleContentLengthIsBiggerThanLimit) {
@@ -171,12 +172,12 @@ TEST_F(ClientHandlerTest, HandleContentLengthIsBiggerThanLimit) {
     std::string response(buffer, receivedBytes);
 
     EXPECT_NE(response.find("413"), std::string::npos);
-    EXPECT_NE(response.find("Request Entity Too Large"), std::string::npos);
+    EXPECT_NE(response.find("Content Too Large"), std::string::npos);
 }
 
 TEST_F(ClientHandlerTest, HandleUnknownEndpoint) {
     router.addRoute(HttpMethod::GET, "/", [](const HttpRequest&)->HttpResponse {
-        return HttpResponse{200, "Hello", {}};
+        return HttpResponse{HttpStatus::OK, "Hello", {}};
     });
     std::string request{
         "GET /unknown_endpoint HTTP/1.1\r\n"
@@ -198,7 +199,7 @@ TEST_F(ClientHandlerTest, HandleUnknownEndpoint) {
 
 TEST_F(ClientHandlerTest, HandleUnsupportedMethod) {
     router.addRoute(HttpMethod::GET, "/", [](const HttpRequest&)->HttpResponse {
-        return HttpResponse{200, "Hello", {}};
+        return HttpResponse{HttpStatus::OK, "Hello", {}};
     });
     std::string request{
         "POST / HTTP/1.1\r\n"
@@ -222,7 +223,7 @@ TEST_F(ClientHandlerTest, HandleUnsupportedMethod) {
 
 TEST_F(ClientHandlerTest, HandleClientClosesEarlier) {
     router.addRoute(HttpMethod::GET, "/", [](const HttpRequest&)->HttpResponse {
-        return HttpResponse{200, "You will never get this page", {}};
+        return HttpResponse{HttpStatus::OK, "You will never get this page", {}};
     });
 
     const std::string firstPart{
@@ -255,7 +256,7 @@ TEST_F(ClientHandlerTest, HandleClientClosesEarlier) {
 
 TEST_F(ClientHandlerTest, HandleReceiveTimeout) {
     router.addRoute(HttpMethod::GET, "/", [](const HttpRequest&)->HttpResponse {
-        return HttpResponse{200, "You will never get this page", {}};
+        return HttpResponse{HttpStatus::OK, "You will never get this page", {}};
     });
 
     const std::string partialRequest{"GET / HTTP/1.1\r\n"};
