@@ -70,6 +70,7 @@ target_sources(unit_tests
                PRIVATE
                tests/test_client_handler.cpp
                tests/test_headers.cpp
+               tests/test_http_status.cpp
                tests/test_request_parser.cpp
                tests/test_router.cpp
 )
